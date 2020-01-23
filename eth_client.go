@@ -32,7 +32,7 @@ type EthClient struct {
 	keystore          keystore.EthKeyStore
 	ethManager        manager.EthManager
 	gasStation        gasmeter.GasStation
-	networkId         uint64
+	networkID         uint64
 	contractAddresses map[EthContract]common.Address
 	nonceCache        ethfw.NonceCache
 
@@ -58,7 +58,7 @@ func NewEthClient(
 	cli := &EthClient{
 		keystore:          ks,
 		ethManager:        ethManager,
-		networkId:         ethManager.ChainID(),
+		networkID:         ethManager.ChainID(),
 		nonceCache:        ethfw.NewNonceCache(),
 		contractAddresses: contractAddresses,
 		ercWrappers:       make(map[common.Address]*wrappers.ERC20),
@@ -69,7 +69,7 @@ func NewEthClient(
 		return nil, err
 	}
 
-	if allowGasOracles && cli.networkId == 1 {
+	if allowGasOracles && cli.networkID == 1 {
 		// we're on Ethereum MainNet
 		gasStation, err := gasmeter.NewGasStation("https://ethgasstation.info/json/ethgasAPI.json", time.Minute)
 		if err != nil {
@@ -86,6 +86,19 @@ func NewEthClient(
 	})
 
 	return cli, nil
+}
+
+func (cli *EthClient) SetDefaultFromAddress(address common.Address) {
+	cli.nonceCache.Sync(address, func() (uint64, error) {
+		nonce, err := cli.ethManager.PendingNonceAt(context.TODO(), address)
+		if err != nil {
+			logrus.WithError(err).
+				WithField("address", address.Hex).
+				Warningln("failed to update nonce for account")
+		}
+
+		return nonce, err
+	})
 }
 
 func (cli *EthClient) EthBalance(ctx context.Context, address common.Address) (*big.Int, error) {
@@ -110,7 +123,7 @@ func (cli *EthClient) initContractWrappers() error {
 }
 
 type CallArgs struct {
-	Gas      *ethfw.Wei
+	GasPrice *big.Int
 	From     common.Address
 	FromPass string
 	Context  context.Context
@@ -118,28 +131,6 @@ type CallArgs struct {
 
 // UnlimitedAllowance is uint constant MAX_UINT = 2**256 - 1
 var UnlimitedAllowance = big.NewInt(0).Sub(big.NewInt(0).Exp(big.NewInt(2), big.NewInt(256), nil), big.NewInt(1))
-
-func (cli *EthClient) erc20Wrapper(asset common.Address) (*wrappers.ERC20, error) {
-	cli.ercWrappersMux.RLock()
-	wrapper, ok := cli.ercWrappers[asset]
-	cli.ercWrappersMux.RUnlock()
-
-	if ok {
-		return wrapper, nil
-	}
-
-	cli.ercWrappersMux.Lock()
-	defer cli.ercWrappersMux.Unlock()
-
-	wrapper, err := wrappers.NewERC20(asset, cli.ethManager)
-	if err != nil {
-		err = errors.Wrap(err, "failed to init ERC20 contract wrapper")
-		return nil, err
-	}
-	cli.ercWrappers[asset] = wrapper
-
-	return wrapper, nil
-}
 
 func (cli *EthClient) Contracts() map[EthContract]common.Address {
 	return cli.contractAddresses
@@ -274,6 +265,216 @@ func (cli *EthClient) Approve(call *CallArgs, asset, spender common.Address, val
 	return txHash, err
 }
 
+var (
+	ErrAlreadyLocked   = errors.New("token aleady locked")
+	ErrAlreadyUnlocked = errors.New("token aleady unlocked")
+)
+
+func (cli *EthClient) TokenLock(call *CallArgs, asset common.Address) (txHash common.Hash, err error) {
+	opts := cli.transactOpts(call)
+
+	var erc20Wrapper *wrappers.ERC20
+	if erc20Wrapper, err = cli.erc20Wrapper(asset); err != nil {
+		return
+	}
+
+	var prevAllowance *big.Int
+	allowanceCallOpts := &bind.CallOpts{
+		Context: opts.Context,
+		From:    opts.From,
+	}
+
+	erc20ProxyAddress := cli.contractAddresses[EthContractERC20Proxy]
+
+	if prevAllowance, err = erc20Wrapper.Allowance(
+		allowanceCallOpts,
+		opts.From,
+		erc20ProxyAddress,
+	); err != nil {
+		err = errors.Wrap(err, "previous allowance unknown")
+		return
+	} else if prevAllowance.Cmp(big.NewInt(0)) == 0 {
+		err = ErrAlreadyLocked
+		return
+	}
+
+	err = cli.nonceCache.Serialize(opts.From, func() error {
+		nonce := cli.nonceCache.Incr(opts.From)
+		var resyncUsed bool
+
+		for {
+			opts.Nonce = big.NewInt(nonce)
+			opts.Context, _ = context.WithTimeout(context.Background(), 30*time.Second)
+
+			tx, err := erc20Wrapper.Approve(opts, erc20ProxyAddress, big.NewInt(0))
+			if err != nil {
+				resyncUsed, err = cli.handleTxError(err, opts.From, resyncUsed)
+				if err != nil {
+					// unhandled error
+					return err
+				}
+
+				// try again with new nonce
+				nonce = cli.nonceCache.Incr(opts.From)
+				continue
+			}
+
+			txHash = tx.Hash()
+			return nil
+		}
+	})
+
+	return txHash, err
+}
+
+func (cli *EthClient) TokenUnlock(call *CallArgs, asset common.Address) (txHash common.Hash, err error) {
+	opts := cli.transactOpts(call)
+
+	var erc20Wrapper *wrappers.ERC20
+	if erc20Wrapper, err = cli.erc20Wrapper(asset); err != nil {
+		return
+	}
+
+	var prevAllowance *big.Int
+	allowanceCallOpts := &bind.CallOpts{
+		Context: opts.Context,
+		From:    opts.From,
+	}
+
+	erc20ProxyAddress := cli.contractAddresses[EthContractERC20Proxy]
+
+	if prevAllowance, err = erc20Wrapper.Allowance(
+		allowanceCallOpts,
+		opts.From,
+		erc20ProxyAddress,
+	); err != nil {
+		err = errors.Wrap(err, "previous allowance unknown")
+		return
+	} else if prevAllowance.Cmp(UnlimitedAllowance) == 0 {
+		err = ErrAlreadyUnlocked
+		return
+	}
+
+	err = cli.nonceCache.Serialize(opts.From, func() error {
+		nonce := cli.nonceCache.Incr(opts.From)
+		var resyncUsed bool
+
+		for {
+			opts.Nonce = big.NewInt(nonce)
+			opts.Context, _ = context.WithTimeout(context.Background(), 30*time.Second)
+
+			tx, err := erc20Wrapper.Approve(opts, erc20ProxyAddress, UnlimitedAllowance)
+			if err != nil {
+				resyncUsed, err = cli.handleTxError(err, opts.From, resyncUsed)
+				if err != nil {
+					// unhandled error
+					return err
+				}
+
+				// try again with new nonce
+				nonce = cli.nonceCache.Incr(opts.From)
+				continue
+			}
+
+			txHash = tx.Hash()
+			return nil
+		}
+	})
+
+	return txHash, err
+}
+
+var (
+	ErrInsufficientEthBalance  = errors.New("insufficient ETH balance")
+	ErrInsufficientWethBalance = errors.New("insufficient WETH balance")
+)
+
+func (cli *EthClient) EthWrap(call *CallArgs, amount *big.Int) (txHash common.Hash, err error) {
+	opts := cli.transactOpts(call)
+
+	balance, err := cli.EthBalance(opts.Context, opts.From)
+	if err != nil {
+		err = errors.Wrap(err, "could not check ETH balance")
+		return
+	} else if balance.Cmp(amount) < 0 {
+		err = ErrInsufficientEthBalance
+		return
+	}
+
+	err = cli.nonceCache.Serialize(opts.From, func() error {
+		nonce := cli.nonceCache.Incr(opts.From)
+		var resyncUsed bool
+
+		for {
+			opts.Nonce = big.NewInt(nonce)
+			opts.Context, _ = context.WithTimeout(context.Background(), 30*time.Second)
+
+			// attach ETH to the transaction
+			opts.Value = amount
+
+			tx, err := cli.weth9.Deposit(opts)
+			if err != nil {
+				resyncUsed, err = cli.handleTxError(err, opts.From, resyncUsed)
+				if err != nil {
+					// unhandled error
+					return err
+				}
+
+				// try again with new nonce
+				nonce = cli.nonceCache.Incr(opts.From)
+				continue
+			}
+
+			txHash = tx.Hash()
+			return nil
+		}
+	})
+
+	return txHash, err
+}
+
+func (cli *EthClient) EthUnwrap(call *CallArgs, amount *big.Int) (txHash common.Hash, err error) {
+	opts := cli.transactOpts(call)
+
+	wethAddress := cli.contractAddresses[EthContractWETH9]
+	balance, err := cli.BalanceOf(opts.Context, opts.From, wethAddress)
+	if err != nil {
+		err = errors.Wrap(err, "could not check WETH balance")
+		return
+	} else if balance.Cmp(amount) < 0 {
+		err = ErrInsufficientWethBalance
+		return
+	}
+
+	err = cli.nonceCache.Serialize(opts.From, func() error {
+		nonce := cli.nonceCache.Incr(opts.From)
+		var resyncUsed bool
+
+		for {
+			opts.Nonce = big.NewInt(nonce)
+			opts.Context, _ = context.WithTimeout(context.Background(), 30*time.Second)
+
+			tx, err := cli.weth9.Withdraw(opts, amount)
+			if err != nil {
+				resyncUsed, err = cli.handleTxError(err, opts.From, resyncUsed)
+				if err != nil {
+					// unhandled error
+					return err
+				}
+
+				// try again with new nonce
+				nonce = cli.nonceCache.Incr(opts.From)
+				continue
+			}
+
+			txHash = tx.Hash()
+			return nil
+		}
+	})
+
+	return txHash, err
+}
+
 func (cli *EthClient) transactOpts(call *CallArgs) *bind.TransactOpts {
 	signerFn := cli.keystore.SignerFn(call.From, call.FromPass)
 	opts := &bind.TransactOpts{
@@ -294,8 +495,8 @@ func (cli *EthClient) transactOpts(call *CallArgs) *bind.TransactOpts {
 		}
 
 		opts.GasPrice = wei.ToInt()
-	} else if call.Gas != nil {
-		opts.GasPrice = call.Gas.ToInt()
+	} else if call.GasPrice != nil {
+		opts.GasPrice = call.GasPrice
 	} else {
 		wei, err := cli.ethManager.SuggestGasPrice(context.TODO())
 		if err != nil || wei.Int64() == 0 {
@@ -323,9 +524,9 @@ func (cli *EthClient) handleTxError(err error, from common.Address, resyncUsed b
 		err = errors.Wrap(err, "failed to sign transaction")
 		return false, err
 
-	case err.Error() == "nonce too low",
-		err.Error() == "nonce too high",
-		strings.HasPrefix(err.Error(), "the tx doesn't have the correct nonce"):
+	case strings.Contains(err.Error(), "nonce is too low"),
+		strings.Contains(err.Error(), "nonce is too high"),
+		strings.Contains(err.Error(), "the tx doesn't have the correct nonce"):
 		if resyncUsed {
 			err = errors.Wrap(err, "nonce mismatch and cannot fix by resync")
 			return false, err
@@ -334,12 +535,12 @@ func (cli *EthClient) handleTxError(err error, from common.Address, resyncUsed b
 		cli.resyncNonces(from)
 		return true, nil
 	default:
-		if strings.HasPrefix(err.Error(), "known transaction") {
+		if strings.Contains(err.Error(), "known transaction") {
 			// skip one nonce step, try to send again
 			return false, nil
 		}
 
-		if strings.HasPrefix(err.Error(), "VM Exception") {
+		if strings.Contains(err.Error(), "VM Exception") {
 			// a VM execution consumes gas and nonce is increasing
 			return false, err
 		}
@@ -347,6 +548,28 @@ func (cli *EthClient) handleTxError(err error, from common.Address, resyncUsed b
 		cli.nonceCache.Decr(from)
 		return false, err
 	}
+}
+
+func (cli *EthClient) erc20Wrapper(asset common.Address) (*wrappers.ERC20, error) {
+	cli.ercWrappersMux.RLock()
+	wrapper, ok := cli.ercWrappers[asset]
+	cli.ercWrappersMux.RUnlock()
+
+	if ok {
+		return wrapper, nil
+	}
+
+	cli.ercWrappersMux.Lock()
+	defer cli.ercWrappersMux.Unlock()
+
+	wrapper, err := wrappers.NewERC20(asset, cli.ethManager)
+	if err != nil {
+		err = errors.Wrap(err, "failed to init ERC20 contract wrapper")
+		return nil, err
+	}
+	cli.ercWrappers[asset] = wrapper
+
+	return wrapper, nil
 }
 
 type AccountCreateArgs struct {

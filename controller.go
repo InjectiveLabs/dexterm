@@ -15,8 +15,10 @@ import (
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/olekukonko/tablewriter"
 	toml "github.com/pelletier/go-toml"
+	"github.com/pkg/errors"
 	"github.com/shopspring/decimal"
 	"github.com/sirupsen/logrus"
+	spin "github.com/tj/go-spin"
 	"github.com/xlab/closer"
 
 	"github.com/InjectiveLabs/dexterm/ethfw/keystore"
@@ -107,30 +109,68 @@ func (ctl *AppController) ActionQuit() {
 	closer.Close()
 }
 
-func (ctl *AppController) ActionTradeSell(args interface{}) {
+type TradeMakeOrderArgs struct {
+	MakerToken   string
+	TakerToken   string
+	MakerAmount  string
+	Ratio        string
+	SignPassword string
+}
 
+func (ctl *AppController) ActionTradeMakeOrder(args interface{}) {
+	// meh
+}
+
+type TradeFillOrderArgs struct {
+	TakerToken   string
+	MakerToken   string
+	FillAmount   string
+	OrderHash    string
+	SignPassword string
+}
+
+func (ctl *AppController) ActionTradeFillOrder(args interface{}) {
+	// meh
+}
+
+type TradeBuyArgs struct {
+	Market       string
+	Amount       string
+	SignPassword string
 }
 
 func (ctl *AppController) ActionTradeBuy(args interface{}) {
+	fmt.Println("Sorry, automatic order matching is not ready yet.")
+}
 
+type TradeSellArgs struct {
+	Market       string
+	Amount       string
+	SignPassword string
+}
+
+func (ctl *AppController) ActionTradeSell(args interface{}) {
+	fmt.Println("Sorry, automatic order matching is not ready yet.")
+}
+
+type TradeOrderbook struct {
+	Market string
 }
 
 func (ctl *AppController) ActionTradeOrderbook(args interface{}) {
 
 }
 
-func (ctl *AppController) ActionTradeTokens() {
+func (ctl *AppController) getTokenNamesAndAssets(ctx context.Context) (tokenNames []string, assets []common.Address, err error) {
 	if ctl.ethClient == nil {
-		logrus.Errorln("Etherteum client is not initialized")
+		err = ErrClientUnavailable
 		return
 	}
 
-	ctx := context.Background()
 	pairs, err := ctl.relayerClient.TradePairs(ctx)
-
 	if err != nil {
-		logrus.WithError(err).Errorln("failed to list trade pairs")
-		return
+		err = errors.Wrap(err, "failed to list trade pairs")
+		return tokenNames, assets, err
 	}
 
 	tokenMap := make(map[string]common.Address, len(pairs))
@@ -148,21 +188,35 @@ func (ctl *AppController) ActionTradeTokens() {
 	// always override WETH with client-side configured address
 	tokenMap["WETH"] = ctl.ethClient.contractAddresses[EthContractWETH9]
 
-	tokenNames := make([]string, 0, len(tokenMap))
+	tokenNames = make([]string, 0, len(tokenMap))
 	for name := range tokenMap {
 		tokenNames = append(tokenNames, name)
 	}
 
 	sort.Strings(tokenNames)
 
-	assets := make([]common.Address, 0, len(tokenNames))
+	assets = make([]common.Address, 0, len(tokenNames))
 
 	for _, name := range tokenNames {
 		assets = append(assets, tokenMap[name])
 	}
 
+	return tokenNames, assets, nil
+}
+
+func (ctl *AppController) ActionTradeTokens() {
+	ctx := context.Background()
 	ctx, cancelFn := context.WithTimeout(ctx, 30*time.Second)
 	defer cancelFn()
+
+	tokenNames, assets, err := ctl.getTokenNamesAndAssets(ctx)
+	if err == ErrClientUnavailable {
+		logrus.Errorln("Ethereum client is not initialized")
+		return
+	} else if err != nil {
+		logrus.Errorln(err)
+		return
+	}
 
 	defaultAccount := common.HexToAddress(ctl.mustConfigValue("accounts.default"))
 
@@ -247,20 +301,186 @@ func (ctl *AppController) ActionTradePairs() {
 	}
 }
 
-func (ctl *AppController) ActionUtilUnlock(args interface{}) {
-
+type UtilTokenLockArgs struct {
+	TokenName string
+	Password  string
 }
 
 func (ctl *AppController) ActionUtilLock(args interface{}) {
+	ctx := context.Background()
+	ctx, cancelFn := context.WithTimeout(ctx, 30*time.Second)
+	defer cancelFn()
 
+	tokenNames, assets, err := ctl.getTokenNamesAndAssets(ctx)
+	if err == ErrClientUnavailable {
+		logrus.Errorln("Ethereum client is not initialized")
+		return
+	} else if err != nil {
+		logrus.Errorln(err)
+		return
+	}
+
+	tokenLockArgs := args.(*UtilTokenLockArgs)
+	defaultAccount := common.HexToAddress(ctl.mustConfigValue("accounts.default"))
+
+	callArgs := &CallArgs{
+		Context:  ctx,
+		From:     defaultAccount,
+		FromPass: tokenLockArgs.Password,
+		GasPrice: ctl.ethGasPrice,
+	}
+
+	var asset common.Address
+	tokenName := strings.ToLower(tokenLockArgs.TokenName)
+	for idx, name := range tokenNames {
+		if strings.ToLower(name) == tokenName {
+			asset = assets[idx]
+			break
+		}
+	}
+
+	txHash, err := ctl.ethClient.TokenLock(callArgs, asset)
+	if err != nil {
+		logrus.WithError(err).Errorln("unable to lock token")
+		return
+	}
+
+	fmt.Println(ctl.formatTxLink(txHash))
+	ctl.checkTx(txHash)
+}
+
+type UtilTokenUnlockArgs struct {
+	TokenName string
+	Password  string
+}
+
+func (ctl *AppController) ActionUtilUnlock(args interface{}) {
+	ctx := context.Background()
+	ctx, cancelFn := context.WithTimeout(ctx, 30*time.Second)
+	defer cancelFn()
+
+	tokenNames, assets, err := ctl.getTokenNamesAndAssets(ctx)
+	if err == ErrClientUnavailable {
+		logrus.Errorln("Ethereum client is not initialized")
+		return
+	} else if err != nil {
+		logrus.Errorln(err)
+		return
+	}
+
+	tokenUnlockArgs := args.(*UtilTokenUnlockArgs)
+	defaultAccount := common.HexToAddress(ctl.mustConfigValue("accounts.default"))
+
+	callArgs := &CallArgs{
+		Context:  ctx,
+		From:     defaultAccount,
+		FromPass: tokenUnlockArgs.Password,
+		GasPrice: ctl.ethGasPrice,
+	}
+
+	var asset common.Address
+	tokenName := strings.ToLower(tokenUnlockArgs.TokenName)
+	for idx, name := range tokenNames {
+		if strings.ToLower(name) == tokenName {
+			asset = assets[idx]
+			break
+		}
+	}
+
+	txHash, err := ctl.ethClient.TokenUnlock(callArgs, asset)
+	if err != nil {
+		logrus.WithError(err).Errorln("unable to unlock token")
+		return
+	}
+
+	fmt.Println(ctl.formatTxLink(txHash))
+	ctl.checkTx(txHash)
+}
+
+type UtilWrapArgs struct {
+	Amount   string
+	Password string
 }
 
 func (ctl *AppController) ActionUtilWrap(args interface{}) {
+	ctx := context.Background()
+	ctx, cancelFn := context.WithTimeout(ctx, 30*time.Second)
+	defer cancelFn()
 
+	ethWrapArgs := args.(*UtilWrapArgs)
+	defaultAccount := common.HexToAddress(ctl.mustConfigValue("accounts.default"))
+
+	callArgs := &CallArgs{
+		Context:  ctx,
+		From:     defaultAccount,
+		FromPass: ethWrapArgs.Password,
+		GasPrice: ctl.ethGasPrice,
+	}
+
+	var amount *big.Int
+
+	amountDec, err := decimal.NewFromString(ethWrapArgs.Amount)
+	if err != nil {
+		logrus.WithError(err).Errorln("failed to parse amount")
+		return
+	} else if amountDec.LessThan(decimal.RequireFromString("0.0000001")) {
+		logrus.Errorln("amount is too small, must be at least 0.0000001 ETH")
+		return
+	} else {
+		amount, _ = big.NewInt(0).SetString(amountDec.Truncate(9).Shift(18).String(), 10)
+	}
+
+	txHash, err := ctl.ethClient.EthWrap(callArgs, amount)
+	if err != nil {
+		logrus.WithError(err).Errorln("unable to wrap ETH")
+		return
+	}
+
+	fmt.Println(ctl.formatTxLink(txHash))
+	ctl.checkTx(txHash)
+}
+
+type UtilUnwrapArgs struct {
+	Amount   string
+	Password string
 }
 
 func (ctl *AppController) ActionUtilUnwrap(args interface{}) {
+	ctx := context.Background()
+	ctx, cancelFn := context.WithTimeout(ctx, 30*time.Second)
+	defer cancelFn()
 
+	ethUnwrapArgs := args.(*UtilUnwrapArgs)
+	defaultAccount := common.HexToAddress(ctl.mustConfigValue("accounts.default"))
+
+	callArgs := &CallArgs{
+		Context:  ctx,
+		From:     defaultAccount,
+		FromPass: ethUnwrapArgs.Password,
+		GasPrice: ctl.ethGasPrice,
+	}
+
+	var amount *big.Int
+
+	amountDec, err := decimal.NewFromString(ethUnwrapArgs.Amount)
+	if err != nil {
+		logrus.WithError(err).Errorln("failed to parse amount")
+		return
+	} else if amountDec.LessThan(decimal.RequireFromString("0.0000001")) {
+		logrus.Errorln("amount is too small, must be at least 0.0000001 WETH")
+		return
+	} else {
+		amount, _ = big.NewInt(0).SetString(amountDec.Truncate(9).Shift(18).String(), 10)
+	}
+
+	txHash, err := ctl.ethClient.EthUnwrap(callArgs, amount)
+	if err != nil {
+		logrus.WithError(err).Errorln("unable to wrap WETH")
+		return
+	}
+
+	fmt.Println(ctl.formatTxLink(txHash))
+	ctl.checkTx(txHash)
 }
 
 func (ctl *AppController) ActionAccountsUse(args interface{}) {
@@ -289,6 +509,12 @@ func (ctl *AppController) ActionAccountsUse(args interface{}) {
 
 	if err := saveConfig(ctl.configPath, ctl.cfg); err != nil {
 		logrus.WithError(err).Errorln("failed to save config file")
+	}
+
+	if ctl.ethClient != nil {
+		ctl.ethClient.SetDefaultFromAddress(addr)
+	} else if err := ctl.initEthClient(); err != nil {
+		logrus.WithError(err).Warningln("failed to init Ethereum client")
 	}
 }
 
@@ -361,6 +587,23 @@ func (ctl *AppController) SuggestAccounts() []prompt.Suggest {
 	return suggestions
 }
 
+func (ctl *AppController) SuggestTokens() []prompt.Suggest {
+	ctx, cancelFn := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancelFn()
+
+	tokenNames, _, err := ctl.getTokenNamesAndAssets(ctx)
+	if err != nil {
+		return nil
+	}
+
+	suggestions := make([]prompt.Suggest, len(tokenNames))
+	for i, name := range tokenNames {
+		suggestions[i].Text = name
+	}
+
+	return suggestions
+}
+
 func (ctl *AppController) takeFirstAccountAsDefault() bool {
 	_, ok := ctl.getConfigValue("accounts.default")
 	if !ok {
@@ -403,6 +646,84 @@ func (ctl *AppController) selectDefaultNetwork() bool {
 	return false
 }
 
+var (
+	ErrTxTimeout   = errors.New("timeout while waiting for tx confirmation")
+	ErrTxBadStatus = errors.New("tx execution ended with failing status code")
+)
+
+func (ctl *AppController) checkTx(txHash common.Hash) {
+	ctx, cancelFn := context.WithTimeout(context.Background(), 2*time.Minute)
+	spinDone := makeSpin(ctx, "checking tx")
+
+	if err := ctl.awaitTx(ctx, txHash); err != nil {
+		switch err {
+		case ErrTxTimeout:
+			logrus.Warningln("unable to check tx confirmation, use explorer link above to check manually")
+		case ErrTxBadStatus:
+			logrus.Errorln("transaction has failed with bad status, check logs using explorer link above")
+		default:
+			logrus.WithError(err).Warningln("unable to check tx confirmation")
+		}
+	}
+
+	cancelFn()
+	<-spinDone
+}
+
+func (ctl *AppController) awaitTx(ctx context.Context, txHash common.Hash) error {
+	tx, err := ctl.ethClient.ethManager.TransactionByHash(ctx, txHash.Hex())
+	if err != nil {
+		return err
+	}
+
+	t := time.NewTimer(time.Second)
+	defer t.Stop()
+	for {
+		select {
+		case <-t.C:
+			tx, err = ctl.ethClient.ethManager.TransactionByHash(ctx, txHash.Hex())
+			if err == nil && tx.BlockNumber != nil {
+				receipt, err := ctl.ethClient.ethManager.TransactionReceiptByHash(ctx, txHash.Hex())
+				if err != nil {
+					err = errors.Wrap(err, "failed to get tx receipt")
+					return err
+				} else if status := receipt.Status; status == 0 {
+					return ErrTxBadStatus
+				}
+
+				// finally a transaction receipt,
+				// with a successful status
+				return nil
+			} else if err != nil {
+				logrus.WithError(err).Warningln("error while checking, retry in 10 seconds")
+				t.Reset(10 * time.Second)
+
+				continue
+			}
+
+			t.Reset(time.Second)
+		case <-ctx.Done():
+			if ctx.Err() != context.Canceled {
+				return ErrTxTimeout
+			}
+
+			return nil
+		}
+	}
+
+	return nil
+}
+
+func (ctl *AppController) formatTxLink(txHash common.Hash) string {
+	networkName := ctl.mustConfigValue("networks.default")
+	explorerEndpoint, ok := ctl.getConfigValue(fmt.Sprintf("networks.%s.explorer", networkName))
+	if ok && len(explorerEndpoint) > 0 {
+		return explorerEndpoint + txHash.Hex()
+	}
+
+	return txHash.Hex()
+}
+
 func (ctl *AppController) initEthClient() error {
 	networkName := ctl.mustConfigValue("networks.default")
 
@@ -418,7 +739,7 @@ func (ctl *AppController) initEthClient() error {
 
 	ethManager := manager.NewManager([]string{
 		ethEndpoint,
-	}, 6721975)
+	}, 100000) // allow only 100k gas per tx
 
 	defaultFromAddress := common.HexToAddress(ctl.mustConfigValue("accounts.default"))
 	allowGasOracles, _ := ctl.getConfigValue("networks.allow_gas_oracles", "true")
@@ -488,4 +809,30 @@ func (ctl *AppController) getConfigValue(path string, fallback ...interface{}) (
 	}
 
 	return v.(string), true
+}
+
+func makeSpin(ctx context.Context, label string) <-chan struct{} {
+	s := spin.New()
+	doneC := make(chan struct{}, 1)
+
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				if ctx.Err() != context.Canceled {
+					fmt.Printf("\r  \033[36m%s\033[m timeout!\n", label)
+					close(doneC)
+					return
+				}
+				fmt.Printf("\r  \033[36m%s\033[m done\n", label)
+				close(doneC)
+				return
+			default:
+				fmt.Printf("\r  \033[36m%s\033[m %s", label, s.Next())
+				time.Sleep(100 * time.Millisecond)
+			}
+		}
+	}()
+
+	return doneC
 }

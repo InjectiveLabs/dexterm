@@ -10,7 +10,7 @@ var (
 		Name:      "allow-gas-oracles",
 		Desc:      "This option enables fetching gas prices from external APIs like EthGasStation.",
 		EnvVar:    "DEXTERM_ALLOW_GAS_ORACLES",
-		Value:     "on",
+		Value:     "true",
 		SetByUser: &networksAllowGasOraclesSet,
 	}
 )
@@ -34,6 +34,17 @@ var (
 		EnvVar:    "DEXTERM_MAINNET_ENDPOINT",
 		Value:     "https://eth-mainnet.alchemyapi.io/jsonrpc/DqEv1TiHskO-G6JprqyhE25k1x0p3hpj",
 		SetByUser: &networksMainnetEndpointSet,
+	}
+)
+
+var (
+	networksMainnetExplorerSet bool
+	networksMainnetExplorerOpt = cli.StringOpt{
+		Name:      "mainnet-explorer",
+		Desc:      "Specify explorer prefix for transactions on MainNet network",
+		EnvVar:    "DEXTERM_MAINNET_EXPLORER",
+		Value:     "https://etherscan.io/tx/",
+		SetByUser: &networksMainnetExplorerSet,
 	}
 )
 
@@ -82,6 +93,17 @@ var (
 )
 
 var (
+	networksRopstenExplorerSet bool
+	networksRopstenExplorerOpt = cli.StringOpt{
+		Name:      "ropsten-explorer",
+		Desc:      "Specify explorer prefix for transactions on Ropsten network",
+		EnvVar:    "DEXTERM_ROPSTEN_EXPLORER",
+		Value:     "https://ropsten.etherscan.io/tx/",
+		SetByUser: &networksRopstenExplorerSet,
+	}
+)
+
+var (
 	networksRopstenGasPriceSet bool
 	networksRopstenGasPriceOpt = cli.StringOpt{
 		Name:      "ropsten-gasprice",
@@ -126,6 +148,17 @@ var (
 )
 
 var (
+	networksDevnetExplorerSet bool
+	networksDevnetExplorerOpt = cli.StringOpt{
+		Name:      "devnet-explorer",
+		Desc:      "Specify explorer prefix for transactions on Ganache network",
+		EnvVar:    "DEXTERM_DEVNET_EXPLORER",
+		Value:     "",
+		SetByUser: &networksDevnetExplorerSet,
+	}
+)
+
+var (
 	networksDevnetGasPriceSet bool
 	networksDevnetGasPriceOpt = cli.StringOpt{
 		Name:      "devnet-gasprice",
@@ -166,6 +199,17 @@ var (
 		EnvVar:    "DEXTERM_MATIC_ENDPOINT",
 		Value:     "matic",
 		SetByUser: &networksMaticEndpointSet,
+	}
+)
+
+var (
+	networksMaticExplorerSet bool
+	networksMaticExplorerOpt = cli.StringOpt{
+		Name:      "matic-explorer",
+		Desc:      "Specify explorer prefix for transactions on Matic network",
+		EnvVar:    "DEXTERM_MATIC_EXPLORER",
+		Value:     "https://testnetv3-explorer.matic.network/tx/",
+		SetByUser: &networksMaticExplorerSet,
 	}
 )
 

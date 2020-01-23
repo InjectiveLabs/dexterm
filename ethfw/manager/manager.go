@@ -156,9 +156,8 @@ func (m *ethManager) rpcClient(ctx context.Context) (cli *rpc.Client, addr strin
 		addr, ok = m.ring.GetNode(m.session)
 		m.ringMux.RUnlock()
 		if !ok {
-			logrus.WithError(errors.New("no available geth nodes in pool, all dead x_X")).
-				WithField("fn", "rpcClient").
-				Warningln("[ERR]")
+			logrus.WithField("fn", "rpcClient").
+				Warningln("no available geth nodes in pool, all dead x_X")
 			return nil, "", false
 		}
 		newCli, err := rpc.Dial(addr)
@@ -190,10 +189,9 @@ func (m *ethManager) failNode(addr string) {
 	}
 	m.fails[addr] = -1
 	m.ring = m.ring.RemoveNode(addr)
-	logrus.WithError(errors.New("geth node has been removed from pool and will be checked again in 5min")).
-		WithField("addr", addr).
+	logrus.WithField("addr", addr).
 		WithField("fn", "failNode").
-		Warningln("[WARN]")
+		Warningln("geth node has been removed from pool and will be checked again in 5min")
 	go func() {
 		// schedule a revival
 		time.Sleep(5 * time.Minute)
@@ -208,10 +206,9 @@ func (m *ethManager) reviveNode(addr string) {
 		// node been restored
 		return
 	}
-	logrus.WithError(errors.New("geth node %s has been added back into pool")).
-		WithField("addr", addr).
+	logrus.WithField("addr", addr).
 		WithField("fn", "reviveNode").
-		Warningln("[WARN]")
+		Warningln("geth node has been added back into pool")
 
 	m.ring = m.ring.AddNode(addr)
 	m.fails[addr] = 0

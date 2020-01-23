@@ -63,13 +63,6 @@ func NewRelayerClient(cfg *RelayerClientConfig) (*RelayerClient, error) {
 	return cli, nil
 }
 
-type TradeBuyArgs struct {
-	Foo    string
-	Bar    string
-	Baz    float64
-	Params []int
-}
-
 func (c *RelayerClient) getVersion(ctx context.Context) (string, error) {
 	res, err := c.client.Version(ctx)
 	if err != nil {

@@ -42,8 +42,10 @@ const (
 	MenuUtil     MenuItem = "util"
 
 	// Trade menu items
-	MenuTradeSell      MenuItem = "sell"
 	MenuTradeBuy       MenuItem = "buy"
+	MenuTradeSell      MenuItem = "sell"
+	MenuTradeMakeOrder MenuItem = "make"
+	MenuTradeFillOrder MenuItem = "fill"
 	MenuTradeOrderbook MenuItem = "orderbook"
 	MenuTradeTokens    MenuItem = "tokens"
 	MenuTradePairs     MenuItem = "pairs"
@@ -75,8 +77,10 @@ var mainSuggestions = []prompt.Suggest{
 }
 
 var tradingSuggestions = []prompt.Suggest{
-	{Text: "s/sell", Description: "Create a market Sell order."},
-	{Text: "b/buy", Description: "Create a market Buy order."},
+	{Text: "b/buy", Description: "Create a market Buy order. (WIP)"},
+	{Text: "s/sell", Description: "Create a market Sell order. (WIP)"},
+	{Text: "m/make", Description: "Create a make order."},
+	{Text: "f/fill", Description: "Fill a make order by placing partial take order."},
 	{Text: "o/orderbook", Description: "View orderbook of a market."},
 	{Text: "t/tokens", Description: "View your account token balances."},
 	{Text: "p/pairs", Description: "View available pairs for trade."},
@@ -94,6 +98,7 @@ var accountsSuggestions = []prompt.Suggest{
 }
 
 var utilSuggestions = []prompt.Suggest{
+	{Text: "t/tokens", Description: "View your account token balances."},
 	{Text: "u/unlock", Description: "Unlock a token and allow trading on the platform."},
 	{Text: "l/lock", Description: "Lock a token from trade. Soft cancels all sell orders too."},
 	{Text: "w/wrap", Description: "Wrap ETH into WETH ERC20 tokens."},
@@ -221,10 +226,23 @@ func (a *AppState) executeInRoot(cmd string) {
 				a.cmd = MenuTradeBuy
 				a.suggestions = nil
 
-				// a.argContainer.AddSuggestions(1, []prompt.Suggest{
-				// 	{Text: "USD/BTC"},
-				// 	{Text: "KEK/LOL"},
-				// })
+				return
+			case oneOf(MenuItem(cmd), MenuTradeSell, "s", "s/sell"):
+				a.argContainer = NewArgContainer(&TradeSellArgs{})
+				a.cmd = MenuTradeSell
+				a.suggestions = nil
+
+				return
+			case oneOf(MenuItem(cmd), MenuTradeMakeOrder, "m", "m/make"):
+				a.argContainer = NewArgContainer(&TradeMakeOrderArgs{})
+				a.cmd = MenuTradeMakeOrder
+				a.suggestions = nil
+
+				return
+			case oneOf(MenuItem(cmd), MenuTradeFillOrder, "f", "f/fill"):
+				a.argContainer = NewArgContainer(&TradeFillOrderArgs{})
+				a.cmd = MenuTradeFillOrder
+				a.suggestions = nil
 
 				return
 			case oneOf(MenuItem(cmd), MenuTradePairs, "p", "p/pairs"):
@@ -273,8 +291,52 @@ func (a *AppState) executeInRoot(cmd string) {
 				return
 			}
 		case MenuUtil:
-			logrus.Warningf("unknown command: %s", cmd)
-			return
+			switch {
+			case oneOf(MenuItem(cmd), MenuTradeTokens, "t", "t/tokens"):
+				a.cmd = MenuTradeTokens
+				a.suggestions = nil
+			case oneOf(MenuItem(cmd), MenuUtilLock, "l", "l/lock"):
+				a.argContainer = NewArgContainer(&UtilTokenLockArgs{})
+				a.cmd = MenuUtilLock
+				a.suggestions = nil
+
+				a.argContainer.AddSuggestions(0, a.controller.SuggestTokens())
+
+				return
+			case oneOf(MenuItem(cmd), MenuUtilUnlock, "u", "u/unlock"):
+				a.argContainer = NewArgContainer(&UtilTokenUnlockArgs{})
+				a.cmd = MenuUtilUnlock
+				a.suggestions = nil
+
+				a.argContainer.AddSuggestions(0, a.controller.SuggestTokens())
+
+				return
+			case oneOf(MenuItem(cmd), MenuUtilWrap, "w", "w/wrap"):
+				a.argContainer = NewArgContainer(&UtilWrapArgs{})
+				a.cmd = MenuUtilWrap
+				a.suggestions = nil
+
+				a.argContainer.AddSuggestions(0, []prompt.Suggest{{
+					Text:        "1.00",
+					Description: "Amount must be entered as float. Minimum value is 0.0000001 ETH",
+				}})
+
+				return
+			case oneOf(MenuItem(cmd), MenuUtilUnwrap, "uw", "uw/unwrap"):
+				a.argContainer = NewArgContainer(&UtilUnwrapArgs{})
+				a.cmd = MenuUtilUnwrap
+				a.suggestions = nil
+
+				a.argContainer.AddSuggestions(0, []prompt.Suggest{{
+					Text:        "1.00",
+					Description: "Amount must be entered as float. Minimum value is 0.0000001 WETH",
+				}})
+
+				return
+			default:
+				logrus.Warningf("unknown command: %s", cmd)
+				return
+			}
 		}
 	}
 
@@ -284,20 +346,24 @@ func (a *AppState) executeInRoot(cmd string) {
 
 func (a *AppState) executeCmd(args interface{}) {
 	switch a.cmd {
-	case MenuTradeSell:
-		a.controller.ActionTradeSell(args)
 	case MenuTradeBuy:
 		a.controller.ActionTradeBuy(args)
+	case MenuTradeSell:
+		a.controller.ActionTradeSell(args)
+	case MenuTradeMakeOrder:
+		a.controller.ActionTradeMakeOrder(args)
+	case MenuTradeFillOrder:
+		a.controller.ActionTradeFillOrder(args)
 	case MenuTradeOrderbook:
 		a.controller.ActionTradeOrderbook(args)
 	case MenuTradeTokens:
 		a.controller.ActionTradeTokens()
 	case MenuTradePairs:
 		a.controller.ActionTradePairs()
-	case MenuUtilUnlock:
-		a.controller.ActionUtilUnlock(args)
 	case MenuUtilLock:
 		a.controller.ActionUtilLock(args)
+	case MenuUtilUnlock:
+		a.controller.ActionUtilUnlock(args)
 	case MenuUtilWrap:
 		a.controller.ActionUtilWrap(args)
 	case MenuUtilUnwrap:
