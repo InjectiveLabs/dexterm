@@ -12,6 +12,7 @@ import (
 
 	"github.com/c-bata/go-prompt"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/fatih/color"
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/olekukonko/tablewriter"
 	toml "github.com/pelletier/go-toml"
@@ -118,7 +119,103 @@ type TradeMakeOrderArgs struct {
 }
 
 func (ctl *AppController) ActionTradeMakeOrder(args interface{}) {
-	// meh
+	makeOrderArgs := args.(*TradeMakeOrderArgs)
+
+	ctx := context.Background()
+	ctx, cancelFn := context.WithTimeout(ctx, 30*time.Second)
+	defer cancelFn()
+
+	tradePair, err := ctl.relayerClient.TradePairs(ctx)
+	if err != nil {
+		logrus.WithError(err).Errorln("unable to fetch trade pairs")
+		return
+	}
+
+	var makerAssetData []byte
+	var takerAssetData []byte
+
+	for _, pair := range tradePair {
+		parts := strings.Split(pair.Name, "/")
+		if len(parts) != 2 {
+			continue
+		}
+
+		if parts[0] == makeOrderArgs.MakerToken && parts[1] == makeOrderArgs.TakerToken {
+			makerAssetData = common.Hex2Bytes(strings.TrimPrefix(pair.MakerAssetData, "0x"))
+			takerAssetData = common.Hex2Bytes(strings.TrimPrefix(pair.TakerAssetData, "0x"))
+		} else if parts[0] == makeOrderArgs.TakerToken && parts[1] == makeOrderArgs.MakerToken {
+			makerAssetData = common.Hex2Bytes(strings.TrimPrefix(pair.TakerAssetData, "0x"))
+			takerAssetData = common.Hex2Bytes(strings.TrimPrefix(pair.MakerAssetData, "0x"))
+		}
+	}
+
+	if len(makerAssetData) == 0 || len(takerAssetData) == 0 {
+		logrus.WithFields(logrus.Fields{
+			"makerToken": makeOrderArgs.MakerToken,
+			"takerToken": makeOrderArgs.TakerToken,
+		}).Errorln("found no trading pair for tokens")
+
+		return
+	}
+
+	var makerAmount *big.Int
+	var ratio decimal.Decimal
+	var takerAmount *big.Int
+
+	makerAmountDec, err := decimal.NewFromString(makeOrderArgs.MakerAmount)
+	if err != nil {
+		logrus.WithError(err).Errorln("failed to parse maker amount")
+		return
+	} else if makerAmountDec.LessThan(decimal.RequireFromString("0.0000001")) {
+		logrus.Errorln("maker amount is too small, must be at least 0.0000001")
+		return
+	} else {
+		makerAmount = dec2big(makerAmountDec)
+	}
+
+	if ratio, err = decimal.NewFromString(makeOrderArgs.Ratio); err != nil {
+		logrus.WithError(err).Errorln("failed to parse ratio")
+		return
+	} else {
+		takerAmount = dec2big(makerAmountDec.Mul(ratio))
+	}
+
+	defaultAccount := common.HexToAddress(ctl.mustConfigValue("accounts.default"))
+
+	callArgs := &CallArgs{
+		Context:  ctx,
+		From:     defaultAccount,
+		FromPass: makeOrderArgs.SignPassword,
+		GasPrice: ctl.ethGasPrice,
+	}
+
+	exchangeAddress := ctl.ethClient.contractAddresses[EthContractExchange]
+	signedOrder, err := ctl.ethClient.CreateAndSignOrder(
+		callArgs,
+		makerAssetData,
+		takerAssetData,
+		makerAmount,
+		takerAmount,
+		exchangeAddress,
+	)
+	if err != nil {
+		logrus.WithError(err).Errorln("unable to sign order")
+		return
+	}
+
+	orderHash, err := ctl.relayerClient.PostMakeOrder(ctx, signedOrder)
+	if err != nil {
+		logrus.WithError(err).Errorln("unable to post make order")
+		return
+	}
+
+	fmt.Println(orderHash)
+}
+
+func dec2big(d decimal.Decimal) *big.Int {
+	v, _ := big.NewInt(0).SetString(d.Truncate(9).Shift(18).String(), 10)
+
+	return v
 }
 
 type TradeFillOrderArgs struct {
@@ -153,18 +250,47 @@ func (ctl *AppController) ActionTradeSell(args interface{}) {
 	fmt.Println("Sorry, automatic order matching is not ready yet.")
 }
 
-type TradeOrderbook struct {
+type TradeOrderbookArgs struct {
 	Market string
 }
 
 func (ctl *AppController) ActionTradeOrderbook(args interface{}) {
+	orderbookArgs := args.(*TradeOrderbookArgs)
 
+	ctx := context.Background()
+	ctx, cancelFn := context.WithTimeout(ctx, 30*time.Second)
+	defer cancelFn()
+
+	bids, asks, err := ctl.relayerClient.Orderbook(ctx, orderbookArgs.Market)
+	if err != nil {
+		logrus.WithField("tradePair", orderbookArgs.Market).
+			WithError(err).Errorln("unable to get orderbook for this market")
+		return
+	}
+
+	if len(bids.Records) == 0 {
+		color.Red("No bids.\n")
+	} else {
+		for _, bid := range bids.Records {
+			ratio, vol := calcOrderRatio(bid.Order)
+			color.Red("%s [%s]\n", ratio.Round(9), vol.Shift(-18).Round(9))
+		}
+	}
+
+	if len(asks.Records) == 0 {
+		color.Green("No asks.\n")
+	} else {
+		for _, ask := range asks.Records {
+			ratio, vol := calcOrderRatio(ask.Order)
+			color.Green("%s [%s]\n", ratio.Round(9), vol.Shift(-18).Round(9))
+		}
+	}
 }
 
 func (ctl *AppController) getTokenNamesAndAssets(ctx context.Context) (tokenNames []string, assets []common.Address, err error) {
-	if ctl.ethClient == nil {
-		err = ErrClientUnavailable
-		return
+	if ctl.relayerClient == nil {
+		err := errors.New("client in offline mode")
+		return nil, nil, err
 	}
 
 	pairs, err := ctl.relayerClient.TradePairs(ctx)
@@ -176,7 +302,7 @@ func (ctl *AppController) getTokenNamesAndAssets(ctx context.Context) (tokenName
 	tokenMap := make(map[string]common.Address, len(pairs))
 
 	for _, pair := range pairs {
-		parts := strings.Split(pairs[0].Name, "/")
+		parts := strings.Split(pair.Name, "/")
 		if len(parts) != 2 {
 			continue
 		}
@@ -185,8 +311,10 @@ func (ctl *AppController) getTokenNamesAndAssets(ctx context.Context) (tokenName
 		tokenMap[parts[1]] = common.HexToAddress("0x" + pair.TakerAssetData[len(pair.TakerAssetData)-40:])
 	}
 
-	// always override WETH with client-side configured address
-	tokenMap["WETH"] = ctl.ethClient.contractAddresses[EthContractWETH9]
+	if ctl.ethClient != nil {
+		// always override WETH with client-side configured address
+		tokenMap["WETH"] = ctl.ethClient.contractAddresses[EthContractWETH9]
+	}
 
 	tokenNames = make([]string, 0, len(tokenMap))
 	for name := range tokenMap {
@@ -238,17 +366,8 @@ func (ctl *AppController) ActionTradeTokens() {
 	networkName := ctl.mustConfigValue("networks.default")
 	proxyAddressHex := ctl.mustConfigValue(fmt.Sprintf("networks.%s.erc20proxy_address", networkName))
 
-	allowances, err := ctl.ethClient.AllowancesMap(ctx, defaultAccount, common.HexToAddress(proxyAddressHex), assets)
-	if err != nil {
-		logrus.WithError(err).Errorln("Unable to quote allowances")
-		return
-	}
-
-	balances, err := ctl.ethClient.BalancesMap(ctx, defaultAccount, assets)
-	if err != nil {
-		logrus.WithError(err).Errorln("Unable to quote balances")
-		return
-	}
+	allowances := ctl.ethClient.AllowancesMap(ctx, defaultAccount, common.HexToAddress(proxyAddressHex), assets)
+	balances := ctl.ethClient.BalancesMap(ctx, defaultAccount, assets)
 
 	if len(balances) == 0 && len(allowances) == 0 {
 		fmt.Println("No token info available.")
@@ -427,7 +546,7 @@ func (ctl *AppController) ActionUtilWrap(args interface{}) {
 		logrus.Errorln("amount is too small, must be at least 0.0000001 ETH")
 		return
 	} else {
-		amount, _ = big.NewInt(0).SetString(amountDec.Truncate(9).Shift(18).String(), 10)
+		amount = dec2big(amountDec)
 	}
 
 	txHash, err := ctl.ethClient.EthWrap(callArgs, amount)
@@ -470,7 +589,7 @@ func (ctl *AppController) ActionUtilUnwrap(args interface{}) {
 		logrus.Errorln("amount is too small, must be at least 0.0000001 WETH")
 		return
 	} else {
-		amount, _ = big.NewInt(0).SetString(amountDec.Truncate(9).Shift(18).String(), 10)
+		amount = dec2big(amountDec)
 	}
 
 	txHash, err := ctl.ethClient.EthUnwrap(callArgs, amount)
@@ -604,6 +723,30 @@ func (ctl *AppController) SuggestTokens() []prompt.Suggest {
 	return suggestions
 }
 
+func (ctl *AppController) SuggestMarkets() []prompt.Suggest {
+	ctx, cancelFn := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancelFn()
+
+	pairs, err := ctl.relayerClient.TradePairs(ctx)
+	if err != nil {
+		logrus.WithError(err).Warningln("failed to fetch trade pairs")
+		return nil
+	}
+
+	suggestions := make([]prompt.Suggest, 0, len(pairs))
+	for _, pair := range pairs {
+		if !pair.Enabled {
+			continue
+		}
+
+		suggestions = append(suggestions, prompt.Suggest{
+			Text: pair.Name,
+		})
+	}
+
+	return suggestions
+}
+
 func (ctl *AppController) takeFirstAccountAsDefault() bool {
 	_, ok := ctl.getConfigValue("accounts.default")
 	if !ok {
@@ -730,11 +873,13 @@ func (ctl *AppController) initEthClient() error {
 	ethEndpoint := ctl.mustConfigValue(fmt.Sprintf("networks.%s.endpoint", networkName))
 	ethGasPrice := ctl.mustConfigValue(fmt.Sprintf("networks.%s.gas_price", networkName))
 
+	exchangeAddressHex := ctl.mustConfigValue(fmt.Sprintf("networks.%s.exchange_address", networkName))
 	weth9AddressHex := ctl.mustConfigValue(fmt.Sprintf("networks.%s.weth9_address", networkName))
 	erc20ProxyAddressHex := ctl.mustConfigValue(fmt.Sprintf("networks.%s.erc20proxy_address", networkName))
 	contractAddresses := map[EthContract]common.Address{
 		EthContractWETH9:      common.HexToAddress(weth9AddressHex),
 		EthContractERC20Proxy: common.HexToAddress(erc20ProxyAddressHex),
+		EthContractExchange:   common.HexToAddress(exchangeAddressHex),
 	}
 
 	ethManager := manager.NewManager([]string{

@@ -3582,7 +3582,7 @@ func ValidateOrderConfigResponseBody(body *OrderConfigResponseBody) (err error) 
 		err = goa.MergeErrors(err, goa.MissingFieldError("takerFeeAssetData", "body"))
 	}
 	if body.SenderAddress != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("body.senderAddress", *body.SenderAddress, "^0x[0-9a-f]{40}$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.senderAddress", *body.SenderAddress, "^0x[0-9a-fA-F]{40}$"))
 	}
 	if body.SenderAddress != nil {
 		if utf8.RuneCountInString(*body.SenderAddress) < 42 {
@@ -3595,7 +3595,7 @@ func ValidateOrderConfigResponseBody(body *OrderConfigResponseBody) (err error) 
 		}
 	}
 	if body.FeeRecipientAddress != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("body.feeRecipientAddress", *body.FeeRecipientAddress, "^0x[0-9a-f]{40}$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.feeRecipientAddress", *body.FeeRecipientAddress, "^0x[0-9a-fA-F]{40}$"))
 	}
 	if body.FeeRecipientAddress != nil {
 		if utf8.RuneCountInString(*body.FeeRecipientAddress) < 42 {
@@ -3665,7 +3665,7 @@ func ValidateFeeRecipientsResponseBody(body *FeeRecipientsResponseBody) (err err
 		err = goa.MergeErrors(err, goa.MissingFieldError("perPage", "body"))
 	}
 	for _, e := range body.Records {
-		err = goa.MergeErrors(err, goa.ValidatePattern("body.records[*]", e, "^0x[0-9a-f]{40}$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.records[*]", e, "^0x[0-9a-fA-F]{40}$"))
 		if utf8.RuneCountInString(e) < 42 {
 			err = goa.MergeErrors(err, goa.InvalidLengthError("body.records[*]", e, utf8.RuneCountInString(e), 42, true))
 		}
@@ -5957,7 +5957,7 @@ func ValidateOrderResponseBody(body *OrderResponseBody) (err error) {
 		}
 	}
 	if body.ExchangeAddress != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("body.exchangeAddress", *body.ExchangeAddress, "^0x[0-9a-f]{40}$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.exchangeAddress", *body.ExchangeAddress, "^0x[0-9a-fA-F]{40}$"))
 	}
 	if body.ExchangeAddress != nil {
 		if utf8.RuneCountInString(*body.ExchangeAddress) < 42 {
@@ -5970,7 +5970,7 @@ func ValidateOrderResponseBody(body *OrderResponseBody) (err error) {
 		}
 	}
 	if body.MakerAddress != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("body.makerAddress", *body.MakerAddress, "^0x[0-9a-f]{40}$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.makerAddress", *body.MakerAddress, "^0x[0-9a-fA-F]{40}$"))
 	}
 	if body.MakerAddress != nil {
 		if utf8.RuneCountInString(*body.MakerAddress) < 42 {
@@ -5983,7 +5983,7 @@ func ValidateOrderResponseBody(body *OrderResponseBody) (err error) {
 		}
 	}
 	if body.TakerAddress != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("body.takerAddress", *body.TakerAddress, "^0x[0-9a-f]{40}$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.takerAddress", *body.TakerAddress, "^0x[0-9a-fA-F]{40}$"))
 	}
 	if body.TakerAddress != nil {
 		if utf8.RuneCountInString(*body.TakerAddress) < 42 {
@@ -5996,7 +5996,7 @@ func ValidateOrderResponseBody(body *OrderResponseBody) (err error) {
 		}
 	}
 	if body.FeeRecipientAddress != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("body.feeRecipientAddress", *body.FeeRecipientAddress, "^0x[0-9a-f]{40}$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.feeRecipientAddress", *body.FeeRecipientAddress, "^0x[0-9a-fA-F]{40}$"))
 	}
 	if body.FeeRecipientAddress != nil {
 		if utf8.RuneCountInString(*body.FeeRecipientAddress) < 42 {
@@ -6009,7 +6009,7 @@ func ValidateOrderResponseBody(body *OrderResponseBody) (err error) {
 		}
 	}
 	if body.SenderAddress != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("body.senderAddress", *body.SenderAddress, "^0x[0-9a-f]{40}$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.senderAddress", *body.SenderAddress, "^0x[0-9a-fA-F]{40}$"))
 	}
 	if body.SenderAddress != nil {
 		if utf8.RuneCountInString(*body.SenderAddress) < 42 {
@@ -6122,7 +6122,7 @@ func ValidateOrderResponseBody(body *OrderResponseBody) (err error) {
 		}
 	}
 	if body.Signature != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("body.signature", *body.Signature, "^0x(([0-9a-f][0-9a-f])+)?$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.signature", *body.Signature, "^0x(([0-9a-fA-F][0-9a-fA-F])+)?$"))
 	}
 	if body.Signature != nil {
 		if utf8.RuneCountInString(*body.Signature) > 512 {
@@ -6159,35 +6159,35 @@ func ValidateOrderRequestBody(body *OrderRequestBody) (err error) {
 	if !(body.ChainID == 1 || body.ChainID == 42 || body.ChainID == 3 || body.ChainID == 4 || body.ChainID == 1337) {
 		err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.chainId", body.ChainID, []interface{}{1, 42, 3, 4, 1337}))
 	}
-	err = goa.MergeErrors(err, goa.ValidatePattern("body.exchangeAddress", body.ExchangeAddress, "^0x[0-9a-f]{40}$"))
+	err = goa.MergeErrors(err, goa.ValidatePattern("body.exchangeAddress", body.ExchangeAddress, "^0x[0-9a-fA-F]{40}$"))
 	if utf8.RuneCountInString(body.ExchangeAddress) < 42 {
 		err = goa.MergeErrors(err, goa.InvalidLengthError("body.exchangeAddress", body.ExchangeAddress, utf8.RuneCountInString(body.ExchangeAddress), 42, true))
 	}
 	if utf8.RuneCountInString(body.ExchangeAddress) > 42 {
 		err = goa.MergeErrors(err, goa.InvalidLengthError("body.exchangeAddress", body.ExchangeAddress, utf8.RuneCountInString(body.ExchangeAddress), 42, false))
 	}
-	err = goa.MergeErrors(err, goa.ValidatePattern("body.makerAddress", body.MakerAddress, "^0x[0-9a-f]{40}$"))
+	err = goa.MergeErrors(err, goa.ValidatePattern("body.makerAddress", body.MakerAddress, "^0x[0-9a-fA-F]{40}$"))
 	if utf8.RuneCountInString(body.MakerAddress) < 42 {
 		err = goa.MergeErrors(err, goa.InvalidLengthError("body.makerAddress", body.MakerAddress, utf8.RuneCountInString(body.MakerAddress), 42, true))
 	}
 	if utf8.RuneCountInString(body.MakerAddress) > 42 {
 		err = goa.MergeErrors(err, goa.InvalidLengthError("body.makerAddress", body.MakerAddress, utf8.RuneCountInString(body.MakerAddress), 42, false))
 	}
-	err = goa.MergeErrors(err, goa.ValidatePattern("body.takerAddress", body.TakerAddress, "^0x[0-9a-f]{40}$"))
+	err = goa.MergeErrors(err, goa.ValidatePattern("body.takerAddress", body.TakerAddress, "^0x[0-9a-fA-F]{40}$"))
 	if utf8.RuneCountInString(body.TakerAddress) < 42 {
 		err = goa.MergeErrors(err, goa.InvalidLengthError("body.takerAddress", body.TakerAddress, utf8.RuneCountInString(body.TakerAddress), 42, true))
 	}
 	if utf8.RuneCountInString(body.TakerAddress) > 42 {
 		err = goa.MergeErrors(err, goa.InvalidLengthError("body.takerAddress", body.TakerAddress, utf8.RuneCountInString(body.TakerAddress), 42, false))
 	}
-	err = goa.MergeErrors(err, goa.ValidatePattern("body.feeRecipientAddress", body.FeeRecipientAddress, "^0x[0-9a-f]{40}$"))
+	err = goa.MergeErrors(err, goa.ValidatePattern("body.feeRecipientAddress", body.FeeRecipientAddress, "^0x[0-9a-fA-F]{40}$"))
 	if utf8.RuneCountInString(body.FeeRecipientAddress) < 42 {
 		err = goa.MergeErrors(err, goa.InvalidLengthError("body.feeRecipientAddress", body.FeeRecipientAddress, utf8.RuneCountInString(body.FeeRecipientAddress), 42, true))
 	}
 	if utf8.RuneCountInString(body.FeeRecipientAddress) > 42 {
 		err = goa.MergeErrors(err, goa.InvalidLengthError("body.feeRecipientAddress", body.FeeRecipientAddress, utf8.RuneCountInString(body.FeeRecipientAddress), 42, false))
 	}
-	err = goa.MergeErrors(err, goa.ValidatePattern("body.senderAddress", body.SenderAddress, "^0x[0-9a-f]{40}$"))
+	err = goa.MergeErrors(err, goa.ValidatePattern("body.senderAddress", body.SenderAddress, "^0x[0-9a-fA-F]{40}$"))
 	if utf8.RuneCountInString(body.SenderAddress) < 42 {
 		err = goa.MergeErrors(err, goa.InvalidLengthError("body.senderAddress", body.SenderAddress, utf8.RuneCountInString(body.SenderAddress), 42, true))
 	}
@@ -6246,7 +6246,7 @@ func ValidateOrderRequestBody(body *OrderRequestBody) (err error) {
 	if utf8.RuneCountInString(body.TakerFeeAssetData) > 74 {
 		err = goa.MergeErrors(err, goa.InvalidLengthError("body.takerFeeAssetData", body.TakerFeeAssetData, utf8.RuneCountInString(body.TakerFeeAssetData), 74, false))
 	}
-	err = goa.MergeErrors(err, goa.ValidatePattern("body.signature", body.Signature, "^0x(([0-9a-f][0-9a-f])+)?$"))
+	err = goa.MergeErrors(err, goa.ValidatePattern("body.signature", body.Signature, "^0x(([0-9a-fA-F][0-9a-fA-F])+)?$"))
 	if utf8.RuneCountInString(body.Signature) > 512 {
 		err = goa.MergeErrors(err, goa.InvalidLengthError("body.signature", body.Signature, utf8.RuneCountInString(body.Signature), 512, false))
 	}
@@ -6332,7 +6332,7 @@ func ValidateRelayerAccountResponseBody(body *RelayerAccountResponseBody) (err e
 		err = goa.MergeErrors(err, goa.MissingFieldError("isOnline", "body"))
 	}
 	if body.Address != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("body.address", *body.Address, "^cosmos1[0-9a-z]{38}$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.address", *body.Address, "^cosmos1[0-9a-zA-Z]{38}$"))
 	}
 	if body.Address != nil {
 		if utf8.RuneCountInString(*body.Address) < 45 {
@@ -6345,7 +6345,7 @@ func ValidateRelayerAccountResponseBody(body *RelayerAccountResponseBody) (err e
 		}
 	}
 	if body.PublicKey != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("body.publicKey", *body.PublicKey, "^0x(([0-9a-f][0-9a-f])+)?$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.publicKey", *body.PublicKey, "^0x(([0-9a-fA-F][0-9a-fA-F])+)?$"))
 	}
 	if body.PublicKey != nil {
 		if utf8.RuneCountInString(*body.PublicKey) > 512 {
@@ -6368,7 +6368,7 @@ func ValidateEthTransactionResponseBody(body *EthTransactionResponseBody) (err e
 		err = goa.MergeErrors(err, goa.MissingFieldError("tradeHashes", "body"))
 	}
 	if body.Proposer != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("body.proposer", *body.Proposer, "^cosmos1[0-9a-z]{38}$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.proposer", *body.Proposer, "^cosmos1[0-9a-zA-Z]{38}$"))
 	}
 	if body.Proposer != nil {
 		if utf8.RuneCountInString(*body.Proposer) < 45 {
@@ -6390,7 +6390,7 @@ func ValidateEthTransactionResponseBody(body *EthTransactionResponseBody) (err e
 		}
 	}
 	if body.TxHash != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("body.txHash", *body.TxHash, "^0x(([0-9a-f][0-9a-f])+)?$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.txHash", *body.TxHash, "^0x(([0-9a-fA-F][0-9a-fA-F])+)?$"))
 	}
 	if body.TxHash != nil {
 		if utf8.RuneCountInString(*body.TxHash) > 512 {
@@ -6398,7 +6398,7 @@ func ValidateEthTransactionResponseBody(body *EthTransactionResponseBody) (err e
 		}
 	}
 	if body.From != nil {
-		err = goa.MergeErrors(err, goa.ValidatePattern("body.from", *body.From, "^0x[0-9a-f]{40}$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.from", *body.From, "^0x[0-9a-fA-F]{40}$"))
 	}
 	if body.From != nil {
 		if utf8.RuneCountInString(*body.From) < 42 {
@@ -6411,7 +6411,7 @@ func ValidateEthTransactionResponseBody(body *EthTransactionResponseBody) (err e
 		}
 	}
 	for _, e := range body.ReviewedBy {
-		err = goa.MergeErrors(err, goa.ValidatePattern("body.reviewedBy[*]", e, "^cosmos1[0-9a-z]{38}$"))
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.reviewedBy[*]", e, "^cosmos1[0-9a-zA-Z]{38}$"))
 		if utf8.RuneCountInString(e) < 45 {
 			err = goa.MergeErrors(err, goa.InvalidLengthError("body.reviewedBy[*]", e, utf8.RuneCountInString(e), 45, true))
 		}

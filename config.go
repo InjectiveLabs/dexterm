@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -78,24 +79,28 @@ var appConfigMap = map[string]*string{
 	"networks.mainnet.gas_price":          app.String(networksMainnetGasPriceOpt),
 	"networks.mainnet.weth9_address":      app.String(networksMainnetWETH9Opt),
 	"networks.mainnet.erc20proxy_address": app.String(networksMainnetERC20ProxyOpt),
+	"networks.mainnet.exchange_address":   app.String(networksMainnetExchangeOpt),
 
 	"networks.ropsten.endpoint":           app.String(networksRopstenEndpointOpt),
 	"networks.ropsten.explorer":           app.String(networksRopstenExplorerOpt),
 	"networks.ropsten.gas_price":          app.String(networksRopstenGasPriceOpt),
 	"networks.ropsten.weth9_address":      app.String(networksRopstenWETH9Opt),
 	"networks.ropsten.erc20proxy_address": app.String(networksRopstenERC20ProxyOpt),
+	"networks.ropsten.exchange_address":   app.String(networksRopstenExchangeOpt),
 
 	"networks.devnet.endpoint":           app.String(networksDevnetEndpointOpt),
 	"networks.devnet.explorer":           app.String(networksDevnetExplorerOpt),
 	"networks.devnet.gas_price":          app.String(networksDevnetGasPriceOpt),
 	"networks.devnet.weth9_address":      app.String(networksDevnetWETH9Opt),
 	"networks.devnet.erc20proxy_address": app.String(networksDevnetERC20ProxyOpt),
+	"networks.devnet.exchange_address":   app.String(networksDevnetExchangeOpt),
 
 	"networks.matic.endpoint":           app.String(networksMaticEndpointOpt),
 	"networks.matic.explorer":           app.String(networksMaticExplorerOpt),
 	"networks.matic.gas_price":          app.String(networksMaticGasPriceOpt),
 	"networks.matic.weth9_address":      app.String(networksMaticWETH9Opt),
 	"networks.matic.erc20proxy_address": app.String(networksMaticERC20ProxyOpt),
+	"networks.matic.exchange_address":   app.String(networksMaticExchangeOpt),
 }
 
 var appConfigSetMap = map[string]cli.StringOpt{
@@ -114,24 +119,28 @@ var appConfigSetMap = map[string]cli.StringOpt{
 	"networks.mainnet.gas_price":          networksMainnetGasPriceOpt,
 	"networks.mainnet.weth9_address":      networksMainnetWETH9Opt,
 	"networks.mainnet.erc20proxy_address": networksMainnetERC20ProxyOpt,
+	"networks.mainnet.exchange_address":   networksMainnetExchangeOpt,
 
 	"networks.ropsten.endpoint":           networksRopstenEndpointOpt,
 	"networks.ropsten.explorer":           networksRopstenExplorerOpt,
 	"networks.ropsten.gas_price":          networksRopstenGasPriceOpt,
 	"networks.ropsten.weth9_address":      networksRopstenWETH9Opt,
 	"networks.ropsten.erc20proxy_address": networksRopstenERC20ProxyOpt,
+	"networks.ropsten.exchange_address":   networksRopstenExchangeOpt,
 
 	"networks.devnet.endpoint":           networksDevnetEndpointOpt,
 	"networks.devnet.explorer":           networksDevnetExplorerOpt,
 	"networks.devnet.gas_price":          networksDevnetGasPriceOpt,
 	"networks.devnet.weth9_address":      networksDevnetWETH9Opt,
 	"networks.devnet.erc20proxy_address": networksDevnetERC20ProxyOpt,
+	"networks.devnet.exchange_address":   networksDevnetExchangeOpt,
 
 	"networks.matic.endpoint":           networksMaticEndpointOpt,
 	"networks.matic.explorer":           networksMaticExplorerOpt,
 	"networks.matic.gas_price":          networksMaticGasPriceOpt,
 	"networks.matic.weth9_address":      networksMaticWETH9Opt,
 	"networks.matic.erc20proxy_address": networksMaticERC20ProxyOpt,
+	"networks.matic.exchange_address":   networksMaticExchangeOpt,
 }
 
 func loadOrCreateConfig(configPath string) (*toml.Tree, error) {
@@ -207,6 +216,17 @@ func saveConfig(configPath string, config *toml.Tree) error {
 	}
 
 	return nil
+}
+
+func configSubsections(config *toml.Tree, section string) ([]string, bool) {
+	if !config.Has(section) {
+		return nil, false
+	}
+
+	v := config.Get(section)
+	fmt.Printf("subsection type %T contents: %+v\n", v, v)
+
+	return nil, true
 }
 
 func toBool(s string) bool {

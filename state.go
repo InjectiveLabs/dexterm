@@ -238,11 +238,30 @@ func (a *AppState) executeInRoot(cmd string) {
 				a.cmd = MenuTradeMakeOrder
 				a.suggestions = nil
 
+				a.argContainer.AddSuggestions(0, a.controller.SuggestTokens())
+				a.argContainer.AddSuggestions(1, a.controller.SuggestTokens())
+				a.argContainer.AddSuggestions(2, []prompt.Suggest{{
+					Text:        "1.00",
+					Description: "Amount must be entered as float. Minimum value is 0.0000001",
+				}})
+				a.argContainer.AddSuggestions(3, []prompt.Suggest{{
+					Text:        "1.00",
+					Description: "Amount must be entered as float. Minimum value is 0.0000001",
+				}})
+
 				return
 			case oneOf(MenuItem(cmd), MenuTradeFillOrder, "f", "f/fill"):
 				a.argContainer = NewArgContainer(&TradeFillOrderArgs{})
 				a.cmd = MenuTradeFillOrder
 				a.suggestions = nil
+
+				return
+			case oneOf(MenuItem(cmd), MenuTradeOrderbook, "o", "o/orderbook"):
+				a.argContainer = NewArgContainer(&TradeOrderbookArgs{})
+				a.cmd = MenuTradeOrderbook
+				a.suggestions = nil
+
+				a.argContainer.AddSuggestions(0, a.controller.SuggestMarkets())
 
 				return
 			case oneOf(MenuItem(cmd), MenuTradePairs, "p", "p/pairs"):

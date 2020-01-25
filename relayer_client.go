@@ -2,13 +2,17 @@ package main
 
 import (
 	"context"
+	"encoding/hex"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	relayerHTTPClient "github.com/InjectiveLabs/injective-core/api/gen/http/relayer/client"
 	relayer "github.com/InjectiveLabs/injective-core/api/gen/relayer"
+	zeroex "github.com/InjectiveLabs/zeroex-go"
 	"github.com/pkg/errors"
+	"github.com/shopspring/decimal"
 	"github.com/sirupsen/logrus"
 	goahttp "goa.design/goa/v3/http"
 )
@@ -87,6 +91,89 @@ func (c *RelayerClient) TradePairs(ctx context.Context) ([]*relayer.TradePair, e
 	}
 
 	return res.TradePairs, nil
+}
+
+func (c *RelayerClient) Orderbook(
+	ctx context.Context,
+	pairName string,
+) (bids, asks *relayer.OrderbookRecords, err error) {
+	if c.client == nil {
+		err = ErrClientUnavailable
+		return
+	}
+
+	var tradePairs []*relayer.TradePair
+
+	if tradePairs, err = c.TradePairs(ctx); err != nil {
+		return
+	}
+
+	var pair *relayer.TradePair
+
+	for _, currentPair := range tradePairs {
+		if currentPair.Name == pairName {
+			pair = currentPair
+		}
+	}
+
+	if pair == nil {
+		err = errors.New("trade pair not found")
+		return
+	}
+
+	res, err := c.client.Orderbook(ctx, &relayer.OrderbookPayload{
+		BaseAssetData:  pair.MakerAssetData,
+		QuoteAssetData: pair.TakerAssetData,
+	})
+	if err != nil {
+		err = errors.Wrap(err, "failed to get orderbook")
+		return
+	}
+
+	return res.Bids, res.Asks, nil
+}
+
+func (c *RelayerClient) PostMakeOrder(
+	ctx context.Context,
+	order *zeroex.SignedOrder,
+) (string, error) {
+	orderHash, _ := order.ComputeOrderHash()
+
+	orderPayload := &relayer.PostOrderPayload{
+		ChainID: order.ChainID.Int64(),
+
+		ExchangeAddress:     strings.ToLower(order.ExchangeAddress.Hex()),
+		MakerAddress:        strings.ToLower(order.MakerAddress.Hex()),
+		TakerAddress:        strings.ToLower(order.TakerAddress.Hex()),
+		FeeRecipientAddress: strings.ToLower(order.FeeRecipientAddress.Hex()),
+		SenderAddress:       strings.ToLower(order.SenderAddress.Hex()),
+
+		MakerAssetAmount: order.MakerAssetAmount.String(),
+		TakerAssetAmount: order.TakerAssetAmount.String(),
+		MakerFee:         order.MakerFee.String(),
+		TakerFee:         order.TakerFee.String(),
+
+		ExpirationTimeSeconds: order.ExpirationTimeSeconds.String(),
+		Salt:                  order.Salt.String(),
+
+		MakerAssetData:    "0x" + hex.EncodeToString(order.MakerAssetData),
+		TakerAssetData:    "0x" + hex.EncodeToString(order.TakerAssetData),
+		MakerFeeAssetData: "0x" + hex.EncodeToString(order.MakerFeeAssetData),
+		TakerFeeAssetData: "0x" + hex.EncodeToString(order.TakerFeeAssetData),
+		Signature:         "0x" + hex.EncodeToString(order.Signature),
+	}
+
+	_, err := c.client.PostOrder(ctx, orderPayload)
+
+	return orderHash.String(), err
+}
+
+func calcOrderRatio(order *relayer.Order) (ratio, vol decimal.Decimal) {
+	makerAmount := decimal.RequireFromString(order.MakerAssetAmount)
+	takerAmount := decimal.RequireFromString(order.TakerAssetAmount)
+	ratio = makerAmount.DivRound(takerAmount, 9)
+	vol = decimal.RequireFromString(order.MakerAssetAmount)
+	return
 }
 
 func newRelayerClient(scheme, host string, timeout time.Duration, debug bool) *relayer.Client {

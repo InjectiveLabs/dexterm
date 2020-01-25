@@ -82,6 +82,17 @@ var (
 )
 
 var (
+	networksMainnetExchangeSet bool
+	networksMainnetExchangeOpt = cli.StringOpt{
+		Name:      "mainnet-exchange",
+		Desc:      "Specify address of Exchange (Injective's Controller) contract on MainNet network",
+		EnvVar:    "DEXTERM_MAINNET_EXCHANGE",
+		Value:     "",
+		SetByUser: &networksMainnetExchangeSet,
+	}
+)
+
+var (
 	networksRopstenEndpointSet bool
 	networksRopstenEndpointOpt = cli.StringOpt{
 		Name:      "ropsten-endpoint",
@@ -137,12 +148,23 @@ var (
 )
 
 var (
+	networksRopstenExchangeSet bool
+	networksRopstenExchangeOpt = cli.StringOpt{
+		Name:      "ropsten-exchange",
+		Desc:      "Specify address of Exchange (Injective's Controller) contract on Ropsten network",
+		EnvVar:    "DEXTERM_ROPSTEN_EXCHANGE",
+		Value:     "",
+		SetByUser: &networksRopstenExchangeSet,
+	}
+)
+
+var (
 	networksDevnetEndpointSet bool
 	networksDevnetEndpointOpt = cli.StringOpt{
 		Name:      "devnet-endpoint",
 		Desc:      "Specify endpoint for Ganache network",
 		EnvVar:    "DEXTERM_DEVNET_ENDPOINT",
-		Value:     "devnet",
+		Value:     "http://localhost:8545",
 		SetByUser: &networksDevnetEndpointSet,
 	}
 )
@@ -188,6 +210,17 @@ var (
 		EnvVar:    "DEXTERM_DEVNET_ERC20PROXY",
 		Value:     "0x1dc4c1cefef38a777b15aa20260a54e584b16c48",
 		SetByUser: &networksDevnetERC20ProxySet,
+	}
+)
+
+var (
+	networksDevnetExchangeSet bool
+	networksDevnetExchangeOpt = cli.StringOpt{
+		Name:      "devnet-exchange",
+		Desc:      "Specify address of Exchange (Injective's Controller) contract on Ganache network",
+		EnvVar:    "DEXTERM_DEVNET_EXCHANGE",
+		Value:     "0x2C530e4Ecc573F11bd72CF5Fdf580d134d25f15F",
+		SetByUser: &networksDevnetExchangeSet,
 	}
 )
 
@@ -243,5 +276,16 @@ var (
 		EnvVar:    "DEXTERM_MATIC_ERC20PROXY",
 		Value:     "0x46fe55b51d24d269cccad63e2ab86f75751a39aa",
 		SetByUser: &networksMaticERC20ProxySet,
+	}
+)
+
+var (
+	networksMaticExchangeSet bool
+	networksMaticExchangeOpt = cli.StringOpt{
+		Name:      "matic-exchange",
+		Desc:      "Specify address of Exchange (Injective's Controller) contract on Matic network",
+		EnvVar:    "DEXTERM_MATIC_EXCHANGE",
+		Value:     "0x50C655DD81B65D6B48D759F897881BD5ADd86E57",
+		SetByUser: &networksMaticExchangeSet,
 	}
 )

@@ -12,6 +12,8 @@ import (
 	"sync"
 	"time"
 
+	zeroex "github.com/InjectiveLabs/zeroex-go"
+	signer "github.com/InjectiveLabs/zeroex-go/signer"
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethKeystore "github.com/ethereum/go-ethereum/accounts/keystore"
@@ -35,6 +37,8 @@ type EthClient struct {
 	networkID         uint64
 	contractAddresses map[EthContract]common.Address
 	nonceCache        ethfw.NonceCache
+	salt              *big.Int
+	saltMux           *sync.Mutex
 
 	ercWrappers    map[common.Address]*wrappers.ERC20
 	ercWrappersMux *sync.RWMutex
@@ -46,6 +50,7 @@ type EthContract string
 const (
 	EthContractERC20Proxy EthContract = "erc20proxy"
 	EthContractWETH9      EthContract = "weth9"
+	EthContractExchange   EthContract = "exchange"
 )
 
 func NewEthClient(
@@ -63,6 +68,8 @@ func NewEthClient(
 		contractAddresses: contractAddresses,
 		ercWrappers:       make(map[common.Address]*wrappers.ERC20),
 		ercWrappersMux:    new(sync.RWMutex),
+		salt:              big.NewInt(time.Now().Unix()),
+		saltMux:           new(sync.Mutex),
 	}
 
 	if err := cli.initContractWrappers(); err != nil {
@@ -168,7 +175,7 @@ func (cli *EthClient) AllowancesMap(
 	ctx context.Context,
 	from, spender common.Address,
 	assets []common.Address,
-) (map[common.Address]*big.Int, error) {
+) map[common.Address]*big.Int {
 
 	results := make(map[common.Address]*big.Int, len(assets))
 	resultsMux := new(sync.Mutex)
@@ -193,14 +200,14 @@ func (cli *EthClient) AllowancesMap(
 		}(asset)
 	}
 
-	return results, nil
+	return results
 }
 
 func (cli *EthClient) BalancesMap(
 	ctx context.Context,
 	owner common.Address,
 	assets []common.Address,
-) (map[common.Address]*big.Int, error) {
+) map[common.Address]*big.Int {
 
 	results := make(map[common.Address]*big.Int, len(assets))
 	resultsMux := new(sync.Mutex)
@@ -225,7 +232,7 @@ func (cli *EthClient) BalancesMap(
 		}(asset)
 	}
 
-	return results, nil
+	return results
 }
 
 func (cli *EthClient) Approve(call *CallArgs, asset, spender common.Address, value *big.Int) (txHash common.Hash, err error) {
@@ -279,6 +286,7 @@ func (cli *EthClient) TokenLock(call *CallArgs, asset common.Address) (txHash co
 	}
 
 	var prevAllowance *big.Int
+
 	allowanceCallOpts := &bind.CallOpts{
 		Context: opts.Context,
 		From:    opts.From,
@@ -474,6 +482,62 @@ func (cli *EthClient) EthUnwrap(call *CallArgs, amount *big.Int) (txHash common.
 
 	return txHash, err
 }
+
+func (cli *EthClient) SignOrder(call *CallArgs, order *zeroex.Order) (*zeroex.SignedOrder, error) {
+	pk, ok := cli.keystore.PrivateKey(call.From, call.FromPass)
+	if !ok {
+		err := errors.New("privkey not loaded")
+		return nil, err
+	}
+
+	signedOrder, err := zeroex.SignOrder(signer.NewLocalSigner(pk), order)
+	if err != nil {
+		err = errors.Wrap(err, "failed to sign order")
+		return nil, err
+	}
+
+	return signedOrder, nil
+}
+
+func (cli *EthClient) CreateAndSignOrder(
+	call *CallArgs,
+	makerAssetData, takerAssetData []byte,
+	makerAssetAmount, takerAssetAmount *big.Int,
+	exchangeAddress common.Address,
+) (*zeroex.SignedOrder, error) {
+	order := &zeroex.Order{
+		ChainID: big.NewInt(int64(cli.ethManager.ChainID())),
+
+		ExchangeAddress:     common.Address{},
+		MakerAddress:        call.From,
+		MakerAssetData:      makerAssetData,
+		MakerFeeAssetData:   makerAssetData,
+		MakerAssetAmount:    makerAssetAmount,
+		MakerFee:            big.NewInt(0),
+		TakerAddress:        exchangeAddress,
+		TakerAssetData:      takerAssetData,
+		TakerFeeAssetData:   takerAssetData,
+		TakerAssetAmount:    takerAssetAmount,
+		TakerFee:            big.NewInt(0),
+		SenderAddress:       common.Address{},
+		FeeRecipientAddress: common.Address{},
+
+		ExpirationTimeSeconds: defaultOrderTTL,
+		Salt:                  cli.nextSalt(),
+	}
+
+	return cli.SignOrder(call, order)
+}
+
+func (cli *EthClient) nextSalt() *big.Int {
+	cli.saltMux.Lock()
+	cli.salt.Add(cli.salt, big.NewInt(0))
+	cli.saltMux.Unlock()
+
+	return cli.salt
+}
+
+var defaultOrderTTL = big.NewInt(int64((30 * 24 * time.Hour).Seconds()))
 
 func (cli *EthClient) transactOpts(call *CallArgs) *bind.TransactOpts {
 	signerFn := cli.keystore.SignerFn(call.From, call.FromPass)
