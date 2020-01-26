@@ -14,16 +14,17 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/fatih/color"
 	homedir "github.com/mitchellh/go-homedir"
-	"github.com/olekukonko/tablewriter"
 	toml "github.com/pelletier/go-toml"
 	"github.com/pkg/errors"
 	"github.com/shopspring/decimal"
 	"github.com/sirupsen/logrus"
 	spin "github.com/tj/go-spin"
 	"github.com/xlab/closer"
+	"github.com/xlab/termtables"
 
 	"github.com/InjectiveLabs/dexterm/ethfw/keystore"
 	"github.com/InjectiveLabs/dexterm/ethfw/manager"
+	relayer "github.com/InjectiveLabs/injective-core/api/gen/relayer"
 )
 
 func init() {
@@ -114,7 +115,7 @@ type TradeMakeOrderArgs struct {
 	MakerToken   string
 	TakerToken   string
 	MakerAmount  string
-	Ratio        string
+	Price        string
 	SignPassword string
 }
 
@@ -133,6 +134,7 @@ func (ctl *AppController) ActionTradeMakeOrder(args interface{}) {
 
 	var makerAssetData []byte
 	var takerAssetData []byte
+	var isBid bool
 
 	for _, pair := range tradePair {
 		parts := strings.Split(pair.Name, "/")
@@ -141,11 +143,14 @@ func (ctl *AppController) ActionTradeMakeOrder(args interface{}) {
 		}
 
 		if parts[0] == makeOrderArgs.MakerToken && parts[1] == makeOrderArgs.TakerToken {
-			makerAssetData = common.Hex2Bytes(strings.TrimPrefix(pair.MakerAssetData, "0x"))
-			takerAssetData = common.Hex2Bytes(strings.TrimPrefix(pair.TakerAssetData, "0x"))
+			makerAssetData = common.FromHex(pair.MakerAssetData)
+			takerAssetData = common.FromHex(pair.TakerAssetData)
+			break
 		} else if parts[0] == makeOrderArgs.TakerToken && parts[1] == makeOrderArgs.MakerToken {
-			makerAssetData = common.Hex2Bytes(strings.TrimPrefix(pair.TakerAssetData, "0x"))
-			takerAssetData = common.Hex2Bytes(strings.TrimPrefix(pair.MakerAssetData, "0x"))
+			makerAssetData = common.FromHex(pair.TakerAssetData)
+			takerAssetData = common.FromHex(pair.MakerAssetData)
+			isBid = true
+			break
 		}
 	}
 
@@ -159,7 +164,7 @@ func (ctl *AppController) ActionTradeMakeOrder(args interface{}) {
 	}
 
 	var makerAmount *big.Int
-	var ratio decimal.Decimal
+	var price decimal.Decimal
 	var takerAmount *big.Int
 
 	makerAmountDec, err := decimal.NewFromString(makeOrderArgs.MakerAmount)
@@ -173,11 +178,13 @@ func (ctl *AppController) ActionTradeMakeOrder(args interface{}) {
 		makerAmount = dec2big(makerAmountDec)
 	}
 
-	if ratio, err = decimal.NewFromString(makeOrderArgs.Ratio); err != nil {
-		logrus.WithError(err).Errorln("failed to parse ratio")
+	if price, err = decimal.NewFromString(makeOrderArgs.Price); err != nil {
+		logrus.WithError(err).Errorln("failed to parse price")
 		return
+	} else if isBid {
+		takerAmount = dec2big(makerAmountDec.Div(price))
 	} else {
-		takerAmount = dec2big(makerAmountDec.Mul(ratio))
+		takerAmount = dec2big(makerAmountDec.Mul(price))
 	}
 
 	defaultAccount := common.HexToAddress(ctl.mustConfigValue("accounts.default"))
@@ -261,6 +268,8 @@ func (ctl *AppController) ActionTradeOrderbook(args interface{}) {
 	ctx, cancelFn := context.WithTimeout(ctx, 30*time.Second)
 	defer cancelFn()
 
+	defaultAccount := common.HexToAddress(ctl.mustConfigValue("accounts.default"))
+
 	bids, asks, err := ctl.relayerClient.Orderbook(ctx, orderbookArgs.Market)
 	if err != nil {
 		logrus.WithField("tradePair", orderbookArgs.Market).
@@ -268,23 +277,65 @@ func (ctl *AppController) ActionTradeOrderbook(args interface{}) {
 		return
 	}
 
-	if len(bids.Records) == 0 {
-		color.Red("No bids.\n")
+	pair := strings.Split(orderbookArgs.Market, "/")
+	baseAsset := pair[0]
+	quoteAsset := pair[1]
+
+	table := termtables.CreateTable()
+	table.UTF8Box()
+	table.AddTitle("ORDERBOOK")
+	table.AddHeaders(
+		fmt.Sprintf("Price (%s)", quoteAsset),
+		fmt.Sprintf("Amount (%s)", baseAsset),
+		"Notes",
+	)
+
+	if len(asks.Records) == 0 {
+		table.AddRow(color.RedString("No asks."), "", "")
 	} else {
-		for _, bid := range bids.Records {
-			ratio, vol := calcOrderRatio(bid.Order)
-			color.Red("%s [%s]\n", ratio.Round(9), vol.Shift(-18).Round(9))
+		for _, ask := range asks.Records {
+			var notes string
+			if isMakerOf(ask.Order, defaultAccount) {
+				notes = "⭑ owner"
+			}
+
+			price, vol := calcOrderPrice(ask.Order, false)
+			table.AddRow(
+				color.RedString("%s", price.StringFixed(9)),
+				color.RedString("%s", vol.Shift(-18).StringFixed(9)),
+				notes,
+			)
 		}
 	}
 
-	if len(asks.Records) == 0 {
-		color.Green("No asks.\n")
+	table.AddSeparator()
+
+	if len(bids.Records) == 0 {
+		table.AddRow(color.GreenString("No bids."), "", "")
 	} else {
-		for _, ask := range asks.Records {
-			ratio, vol := calcOrderRatio(ask.Order)
-			color.Green("%s [%s]\n", ratio.Round(9), vol.Shift(-18).Round(9))
+		for _, bid := range bids.Records {
+			var notes string
+			if isMakerOf(bid.Order, defaultAccount) {
+				notes = "⭑ owner"
+			}
+
+			price, vol := calcOrderPrice(bid.Order, true)
+			table.AddRow(
+				color.GreenString("%s", price.StringFixed(9)),
+				color.GreenString("%s", vol.Shift(-18).StringFixed(9)),
+				notes,
+			)
 		}
 	}
+
+	fmt.Println(table.Render())
+}
+
+func isMakerOf(order *relayer.Order, address common.Address) bool {
+	return bytes.Compare(
+		common.HexToAddress(order.MakerAddress).Bytes(),
+		address.Bytes(),
+	) == 0
 }
 
 func (ctl *AppController) getTokenNamesAndAssets(ctx context.Context) (tokenNames []string, assets []common.Address, err error) {
@@ -360,9 +411,6 @@ func (ctl *AppController) ActionTradeTokens() {
 		ethBalanceStr = ethBalanceDec.StringFixed(8)
 	}
 
-	fmt.Printf("Account %s\n", defaultAccount.Hex())
-	fmt.Println("ETH available:", ethBalanceStr)
-
 	networkName := ctl.mustConfigValue("networks.default")
 	proxyAddressHex := ctl.mustConfigValue(fmt.Sprintf("networks.%s.erc20proxy_address", networkName))
 
@@ -374,8 +422,12 @@ func (ctl *AppController) ActionTradeTokens() {
 		return
 	}
 
-	table := tablewriter.NewWriter(os.Stdout)
-	table.SetHeader([]string{"Token", "Address", "Balance", "Unlocked"})
+	table := termtables.CreateTable()
+	table.UTF8Box()
+	table.AddTitle(
+		fmt.Sprintf("Account %s (%s ETH)", defaultAccount.Hex(), ethBalanceStr),
+	)
+	table.AddHeaders("Token", "Address", "Balance", "Unlocked")
 
 	for idx, name := range tokenNames {
 		addr := assets[idx]
@@ -396,15 +448,15 @@ func (ctl *AppController) ActionTradeTokens() {
 			}
 		}
 
-		table.Append([]string{
+		table.AddRow(
 			name,
 			addr.Hex(),
 			balanceStr,
 			fmt.Sprintf("[%s]", unlockedStr),
-		})
+		)
 	}
 
-	table.Render()
+	fmt.Println(table.Render())
 }
 
 func (ctl *AppController) ActionTradePairs() {

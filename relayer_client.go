@@ -168,10 +168,17 @@ func (c *RelayerClient) PostMakeOrder(
 	return orderHash.String(), err
 }
 
-func calcOrderRatio(order *relayer.Order) (ratio, vol decimal.Decimal) {
+func calcOrderPrice(order *relayer.Order, bid bool) (price, vol decimal.Decimal) {
 	makerAmount := decimal.RequireFromString(order.MakerAssetAmount)
 	takerAmount := decimal.RequireFromString(order.TakerAssetAmount)
-	ratio = makerAmount.DivRound(takerAmount, 9)
+
+	if bid { // i.e. buy
+		price = makerAmount.DivRound(takerAmount, 9)
+		vol = decimal.RequireFromString(order.TakerAssetAmount)
+		return
+	}
+
+	price = takerAmount.DivRound(makerAmount, 9)
 	vol = decimal.RequireFromString(order.MakerAssetAmount)
 	return
 }

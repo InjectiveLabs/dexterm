@@ -3,11 +3,14 @@ module github.com/InjectiveLabs/dexterm
 go 1.13
 
 require (
+	github.com/0xProject/0x-mesh v1.0.7
 	github.com/InjectiveLabs/injective-core/api/gen/http/relayer/client v0.0.0-00010101000000-000000000000
 	github.com/InjectiveLabs/injective-core/api/gen/relayer v0.0.0-00010101000000-000000000000
 	github.com/InjectiveLabs/zeroex-go v0.0.0-20200125063848-29c3866c47f5
 	github.com/afex/hystrix-go v0.0.0-20180502004556-fa1af6a1f4f5 // indirect
+	github.com/albrow/stringset v2.1.0+incompatible // indirect
 	github.com/apex/log v1.1.1
+	github.com/benbjohnson/clock v1.0.0 // indirect
 	github.com/c-bata/go-prompt v0.2.3
 	github.com/ethereum/go-ethereum v1.9.10
 	github.com/fatih/color v1.9.0
@@ -21,8 +24,8 @@ require (
 	github.com/mattn/go-tty v0.0.3 // indirect
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/multiformats/go-multiaddr-dns v0.2.0 // indirect
+	github.com/ocdogan/rbt v0.0.0-20160425054511-de6e2b48be33 // indirect
 	github.com/oklog/ulid v1.3.1
-	github.com/olekukonko/tablewriter v0.0.4
 	github.com/openzipkin/zipkin-go v0.2.2 // indirect
 	github.com/pelletier/go-toml v1.6.0
 	github.com/pkg/errors v0.9.1
@@ -36,6 +39,7 @@ require (
 	github.com/tj/go-spin v1.1.0
 	github.com/xlab/closer v0.0.0-20190328110542-03326addb7c2
 	github.com/xlab/structwalk v1.1.1
+	github.com/xlab/termtables v1.0.0
 	goa.design/goa/v3 v3.0.9
 	golang.org/x/crypto v0.0.0-20200117160349-530e935923ad
 	google.golang.org/api v0.15.0 // indirect
