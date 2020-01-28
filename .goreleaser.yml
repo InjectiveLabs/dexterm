@@ -1,0 +1,31 @@
+project_name: dexterm
+builds:
+- id: "dexterm"
+  binary: dexterm
+  main: goreleaser/goreleaser.go
+  goos:
+    - windows
+    - linux
+    - darwin
+  goarch:
+    - amd64
+  hooks:
+    post: make prepare-release
+archives:
+  - id: github
+    format: zip
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}"
+    replacements:
+      darwin: macOS
+checksum:
+  name_template: 'checksums.txt'
+snapshot:
+  name_template: "{{ .Tag }}-next"
+changelog:
+  sort: asc
+  filters:
+    exclude:
+    - '^docs:'
+    - '^test:'
+release:
+  disable: true
