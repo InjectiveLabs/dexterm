@@ -44,7 +44,6 @@ const (
 	// Trade menu items
 	MenuTradeBuy       MenuItem = "buy"
 	MenuTradeSell      MenuItem = "sell"
-	MenuTradeMakeOrder MenuItem = "make"
 	MenuTradeFillOrder MenuItem = "fill"
 	MenuTradeOrderbook MenuItem = "orderbook"
 	MenuTradeTokens    MenuItem = "tokens"
@@ -222,31 +221,34 @@ func (a *AppState) executeInRoot(cmd string) {
 		case MenuTrade:
 			switch {
 			case oneOf(MenuItem(cmd), MenuTradeBuy, "b", "b/buy"):
-				a.argContainer = NewArgContainer(&TradeBuyArgs{})
+				a.argContainer = NewArgContainer(&TradeMakeBuyOrderArgs{})
 				a.cmd = MenuTradeBuy
 				a.suggestions = nil
 
-				return
-			case oneOf(MenuItem(cmd), MenuTradeSell, "s", "s/sell"):
-				a.argContainer = NewArgContainer(&TradeSellArgs{})
-				a.cmd = MenuTradeSell
-				a.suggestions = nil
-
-				return
-			case oneOf(MenuItem(cmd), MenuTradeMakeOrder, "m", "m/make"):
-				a.argContainer = NewArgContainer(&TradeMakeOrderArgs{})
-				a.cmd = MenuTradeMakeOrder
-				a.suggestions = nil
-
-				a.argContainer.AddSuggestions(0, a.controller.SuggestTokens())
-				a.argContainer.AddSuggestions(1, a.controller.SuggestTokens())
-				a.argContainer.AddSuggestions(2, []prompt.Suggest{{
+				a.argContainer.AddSuggestions(0, a.controller.SuggestMarkets())
+				a.argContainer.AddSuggestions(1, []prompt.Suggest{{
 					Text:        "1.00",
 					Description: "Amount must be entered as float. Minimum value is 0.0000001",
 				}})
-				a.argContainer.AddSuggestions(3, []prompt.Suggest{{
+				a.argContainer.AddSuggestions(2, []prompt.Suggest{{
+					Text:        "1.00",
+					Description: "Price must be entered as float. Minimum value is 0.0000001",
+				}})
+
+				return
+			case oneOf(MenuItem(cmd), MenuTradeSell, "s", "s/sell"):
+				a.argContainer = NewArgContainer(&TradeMakeSellOrderArgs{})
+				a.cmd = MenuTradeSell
+				a.suggestions = nil
+
+				a.argContainer.AddSuggestions(0, a.controller.SuggestMarkets())
+				a.argContainer.AddSuggestions(1, []prompt.Suggest{{
 					Text:        "1.00",
 					Description: "Amount must be entered as float. Minimum value is 0.0000001",
+				}})
+				a.argContainer.AddSuggestions(2, []prompt.Suggest{{
+					Text:        "1.00",
+					Description: "Price must be entered as float. Minimum value is 0.0000001",
 				}})
 
 				return
@@ -254,6 +256,15 @@ func (a *AppState) executeInRoot(cmd string) {
 				a.argContainer = NewArgContainer(&TradeFillOrderArgs{})
 				a.cmd = MenuTradeFillOrder
 				a.suggestions = nil
+
+				a.argContainer.AddSuggestions(0, a.controller.SuggestMarkets())
+				a.argContainer.AddSuggestionsLazy(1, []int{0}, func(args ...interface{}) []prompt.Suggest {
+					return a.controller.SuggestOrderToFill(args[0].(string))
+				})
+				a.argContainer.AddSuggestions(2, []prompt.Suggest{{
+					Text:        "1.00",
+					Description: "Amount must be entered as float. Minimum value is 0.0000001",
+				}})
 
 				return
 			case oneOf(MenuItem(cmd), MenuTradeOrderbook, "o", "o/orderbook"):
@@ -369,8 +380,6 @@ func (a *AppState) executeCmd(args interface{}) {
 		a.controller.ActionTradeBuy(args)
 	case MenuTradeSell:
 		a.controller.ActionTradeSell(args)
-	case MenuTradeMakeOrder:
-		a.controller.ActionTradeMakeOrder(args)
 	case MenuTradeFillOrder:
 		a.controller.ActionTradeFillOrder(args)
 	case MenuTradeOrderbook:
@@ -431,10 +440,11 @@ func (a *AppState) changeRoot(newRoot MenuItem) {
 }
 
 type ArgContainer struct {
-	obj         interface{}
-	fields      []string
-	suggestions map[int][]prompt.Suggest
-	offset      int
+	obj             interface{}
+	fields          []string
+	lazySuggestions map[int]lazySuggestion
+	suggestions     map[int][]prompt.Suggest
+	offset          int
 }
 
 func NewArgContainer(obj interface{}) *ArgContainer {
@@ -466,7 +476,22 @@ func (a *ArgContainer) CurrentFieldValue() interface{} {
 	return v
 }
 
+type lazySuggestion struct {
+	Fields []int
+	Fn     LazySuggestFn
+}
+
 func (a *ArgContainer) CurrentFieldSuggestions() []prompt.Suggest {
+	if lazySuggstion, ok := a.lazySuggestions[a.offset]; ok {
+		args := make([]interface{}, 0, len(lazySuggstion.Fields))
+		for _, fieldOffset := range lazySuggstion.Fields {
+			v, _ := structwalk.FieldValue(a.fields[fieldOffset], a.obj)
+			args = append(args, v)
+		}
+
+		return lazySuggstion.Fn(args...)
+	}
+
 	return a.suggestions[a.offset]
 }
 
@@ -476,6 +501,19 @@ func (a *ArgContainer) AddSuggestions(index int, suggestions []prompt.Suggest) {
 	}
 
 	a.suggestions[index] = suggestions
+}
+
+type LazySuggestFn func(args ...interface{}) []prompt.Suggest
+
+func (a *ArgContainer) AddSuggestionsLazy(index int, fields []int, fn LazySuggestFn) {
+	if a.lazySuggestions == nil {
+		a.lazySuggestions = make(map[int]lazySuggestion)
+	}
+
+	a.lazySuggestions[index] = lazySuggestion{
+		Fields: fields,
+		Fn:     fn,
+	}
 }
 
 func (a *ArgContainer) UpdateCurrentField(v interface{}) (stop bool) {

@@ -15,6 +15,7 @@ import (
 	"github.com/shopspring/decimal"
 	"github.com/sirupsen/logrus"
 	goahttp "goa.design/goa/v3/http"
+	goa "goa.design/goa/v3/pkg"
 )
 
 type RelayerClient struct {
@@ -133,7 +134,48 @@ func (c *RelayerClient) Orderbook(
 	return res.Bids, res.Asks, nil
 }
 
-func (c *RelayerClient) PostMakeOrder(
+func (c *RelayerClient) Order(ctx context.Context, orderHash string) (*relayer.Order, error) {
+	if c.client == nil {
+		return nil, ErrClientUnavailable
+	}
+
+	res, err := c.client.GetActiveOrder(ctx, &relayer.GetActiveOrderPayload{
+		OrderHash: orderHash,
+	})
+	if err != nil {
+		if serviceError, ok := err.(*goa.ServiceError); ok {
+			if serviceError.ErrorName() == "not_found" {
+				err = errors.New("order not found")
+				return nil, err
+			}
+		}
+
+		err = errors.Wrap(err, "unable to get order")
+		return nil, err
+	}
+
+	return res.Order, nil
+}
+
+func (c *RelayerClient) Orders(ctx context.Context, tradePairHash string) ([]*relayer.Order, error) {
+	if c.client == nil {
+		return nil, ErrClientUnavailable
+	}
+
+	var collection = "active"
+	res, err := c.client.ListOrders(ctx, &relayer.ListOrdersPayload{
+		Collection:    &collection,
+		TradePairHash: &tradePairHash,
+	})
+	if err != nil {
+		err = errors.Wrap(err, "failed to list orders")
+		return nil, err
+	}
+
+	return res.MakeOrders, nil
+}
+
+func (c *RelayerClient) PostOrder(
 	ctx context.Context,
 	order *zeroex.SignedOrder,
 ) (string, error) {
@@ -166,6 +208,44 @@ func (c *RelayerClient) PostMakeOrder(
 	_, err := c.client.PostOrder(ctx, orderPayload)
 
 	return orderHash.String(), err
+}
+
+func (c *RelayerClient) TakeOrder(
+	ctx context.Context,
+	makeOrders []*relayer.Order,
+	takeOrder *zeroex.SignedOrder,
+) (string, error) {
+	takeOrderHash, _ := takeOrder.ComputeOrderHash()
+
+	orderPayload := &relayer.TakeOrderPayload{
+		MakeOrders: makeOrders,
+		MakeOrderFillAmounts: []string{
+			takeOrder.MakerAssetAmount.String(),
+		},
+		TakeOrder: &relayer.Order{
+			ChainID:               takeOrder.ChainID.Int64(),
+			ExchangeAddress:       strings.ToLower(takeOrder.ExchangeAddress.Hex()),
+			MakerAddress:          strings.ToLower(takeOrder.MakerAddress.Hex()),
+			TakerAddress:          strings.ToLower(takeOrder.TakerAddress.Hex()),
+			FeeRecipientAddress:   strings.ToLower(takeOrder.FeeRecipientAddress.Hex()),
+			SenderAddress:         strings.ToLower(takeOrder.SenderAddress.Hex()),
+			MakerAssetAmount:      takeOrder.MakerAssetAmount.String(),
+			TakerAssetAmount:      takeOrder.TakerAssetAmount.String(),
+			MakerFee:              takeOrder.MakerFee.String(),
+			TakerFee:              takeOrder.TakerFee.String(),
+			ExpirationTimeSeconds: takeOrder.ExpirationTimeSeconds.String(),
+			Salt:                  takeOrder.Salt.String(),
+			MakerAssetData:        "0x" + hex.EncodeToString(takeOrder.MakerAssetData),
+			TakerAssetData:        "0x" + hex.EncodeToString(takeOrder.TakerAssetData),
+			MakerFeeAssetData:     "0x" + hex.EncodeToString(takeOrder.MakerFeeAssetData),
+			TakerFeeAssetData:     "0x" + hex.EncodeToString(takeOrder.TakerFeeAssetData),
+			Signature:             "0x" + hex.EncodeToString(takeOrder.Signature),
+		},
+	}
+
+	_, err := c.client.TakeOrder(ctx, orderPayload)
+
+	return takeOrderHash.String(), err
 }
 
 func calcOrderPrice(order *relayer.Order, bid bool) (price, vol decimal.Decimal) {

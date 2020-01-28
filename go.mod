@@ -4,6 +4,9 @@ go 1.13
 
 require (
 	github.com/0xProject/0x-mesh v1.0.7
+	github.com/Azure/azure-sdk-for-go v38.2.0+incompatible
+	github.com/Azure/go-autorest/autorest/to v0.3.0 // indirect
+	github.com/Azure/go-autorest/autorest/validation v0.2.0 // indirect
 	github.com/InjectiveLabs/injective-core/api/gen/http/relayer/client v0.0.0-00010101000000-000000000000
 	github.com/InjectiveLabs/injective-core/api/gen/relayer v0.0.0-00010101000000-000000000000
 	github.com/InjectiveLabs/zeroex-go v0.0.0-20200125063848-29c3866c47f5
@@ -42,6 +45,7 @@ require (
 	github.com/xlab/termtables v1.0.0
 	goa.design/goa/v3 v3.0.9
 	golang.org/x/crypto v0.0.0-20200117160349-530e935923ad
+	golang.org/x/text v0.3.2
 	google.golang.org/api v0.15.0 // indirect
 	honnef.co/go/tools v0.0.0-20190523083050-ea95bdfd59fc
 )

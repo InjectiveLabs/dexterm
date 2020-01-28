@@ -111,22 +111,21 @@ func (ctl *AppController) ActionQuit() {
 	closer.Close()
 }
 
-type TradeMakeOrderArgs struct {
-	MakerToken   string
-	TakerToken   string
-	MakerAmount  string
+type TradeMakeBuyOrderArgs struct {
+	Market       string
+	Amount       string
 	Price        string
 	SignPassword string
 }
 
-func (ctl *AppController) ActionTradeMakeOrder(args interface{}) {
-	makeOrderArgs := args.(*TradeMakeOrderArgs)
+func (ctl *AppController) ActionTradeBuy(args interface{}) {
+	makeBuyOrderArgs := args.(*TradeMakeBuyOrderArgs)
 
 	ctx := context.Background()
 	ctx, cancelFn := context.WithTimeout(ctx, 30*time.Second)
 	defer cancelFn()
 
-	tradePair, err := ctl.relayerClient.TradePairs(ctx)
+	tradePairs, err := ctl.relayerClient.TradePairs(ctx)
 	if err != nil {
 		logrus.WithError(err).Errorln("unable to fetch trade pairs")
 		return
@@ -134,65 +133,52 @@ func (ctl *AppController) ActionTradeMakeOrder(args interface{}) {
 
 	var makerAssetData []byte
 	var takerAssetData []byte
-	var isBid bool
 
-	for _, pair := range tradePair {
-		parts := strings.Split(pair.Name, "/")
-		if len(parts) != 2 {
+	for _, pair := range tradePairs {
+		if pair.Name != makeBuyOrderArgs.Market {
 			continue
 		}
 
-		if parts[0] == makeOrderArgs.MakerToken && parts[1] == makeOrderArgs.TakerToken {
-			makerAssetData = common.FromHex(pair.MakerAssetData)
-			takerAssetData = common.FromHex(pair.TakerAssetData)
-			break
-		} else if parts[0] == makeOrderArgs.TakerToken && parts[1] == makeOrderArgs.MakerToken {
-			makerAssetData = common.FromHex(pair.TakerAssetData)
-			takerAssetData = common.FromHex(pair.MakerAssetData)
-			isBid = true
-			break
-		}
+		// swapped because it's a bid
+		makerAssetData = common.FromHex(pair.TakerAssetData)
+		takerAssetData = common.FromHex(pair.MakerAssetData)
 	}
 
 	if len(makerAssetData) == 0 || len(takerAssetData) == 0 {
 		logrus.WithFields(logrus.Fields{
-			"makerToken": makeOrderArgs.MakerToken,
-			"takerToken": makeOrderArgs.TakerToken,
-		}).Errorln("found no trading pair for tokens")
+			"market": makeBuyOrderArgs.Market,
+		}).Errorln("specified market not found")
 
 		return
 	}
 
-	var makerAmount *big.Int
-	var price decimal.Decimal
 	var takerAmount *big.Int
+	var price decimal.Decimal
+	var makerAmount *big.Int
 
-	makerAmountDec, err := decimal.NewFromString(makeOrderArgs.MakerAmount)
+	takerAmountDec, err := decimal.NewFromString(makeBuyOrderArgs.Amount)
 	if err != nil {
-		logrus.WithError(err).Errorln("failed to parse maker amount")
+		logrus.WithError(err).Errorln("failed to parse buy amount")
 		return
-	} else if makerAmountDec.LessThan(decimal.RequireFromString("0.0000001")) {
-		logrus.Errorln("maker amount is too small, must be at least 0.0000001")
+	} else if takerAmountDec.LessThan(decimal.RequireFromString("0.0000001")) {
+		logrus.Errorln("Buy amount is too small, must be at least 0.0000001")
 		return
 	} else {
-		makerAmount = dec2big(makerAmountDec)
+		takerAmount = dec2big(takerAmountDec)
 	}
 
-	if price, err = decimal.NewFromString(makeOrderArgs.Price); err != nil {
-		logrus.WithError(err).Errorln("failed to parse price")
+	if price, err = decimal.NewFromString(makeBuyOrderArgs.Price); err != nil {
+		logrus.WithError(err).Errorln("failed to parse buy price")
 		return
-	} else if isBid {
-		takerAmount = dec2big(makerAmountDec.Div(price))
-	} else {
-		takerAmount = dec2big(makerAmountDec.Mul(price))
 	}
+	makerAmount = dec2big(takerAmountDec.Mul(price))
 
 	defaultAccount := common.HexToAddress(ctl.mustConfigValue("accounts.default"))
 
 	callArgs := &CallArgs{
 		Context:  ctx,
 		From:     defaultAccount,
-		FromPass: makeOrderArgs.SignPassword,
+		FromPass: makeBuyOrderArgs.SignPassword,
 		GasPrice: ctl.ethGasPrice,
 	}
 
@@ -210,9 +196,102 @@ func (ctl *AppController) ActionTradeMakeOrder(args interface{}) {
 		return
 	}
 
-	orderHash, err := ctl.relayerClient.PostMakeOrder(ctx, signedOrder)
+	orderHash, err := ctl.relayerClient.PostOrder(ctx, signedOrder)
 	if err != nil {
-		logrus.WithError(err).Errorln("unable to post make order")
+		logrus.WithError(err).Errorln("unable to post order")
+		return
+	}
+
+	fmt.Println(orderHash)
+}
+
+type TradeMakeSellOrderArgs struct {
+	Market       string
+	Amount       string
+	Price        string
+	SignPassword string
+}
+
+func (ctl *AppController) ActionTradeSell(args interface{}) {
+	makeSellOrderArgs := args.(*TradeMakeSellOrderArgs)
+
+	ctx := context.Background()
+	ctx, cancelFn := context.WithTimeout(ctx, 30*time.Second)
+	defer cancelFn()
+
+	tradePairs, err := ctl.relayerClient.TradePairs(ctx)
+	if err != nil {
+		logrus.WithError(err).Errorln("unable to fetch trade pairs")
+		return
+	}
+
+	var makerAssetData []byte
+	var takerAssetData []byte
+
+	for _, pair := range tradePairs {
+		if pair.Name != makeSellOrderArgs.Market {
+			continue
+		}
+
+		makerAssetData = common.FromHex(pair.MakerAssetData)
+		takerAssetData = common.FromHex(pair.TakerAssetData)
+	}
+
+	if len(makerAssetData) == 0 || len(takerAssetData) == 0 {
+		logrus.WithFields(logrus.Fields{
+			"market": makeSellOrderArgs.Market,
+		}).Errorln("specified market not found")
+
+		return
+	}
+
+	var makerAmount *big.Int
+	var price decimal.Decimal
+	var takerAmount *big.Int
+
+	makerAmountDec, err := decimal.NewFromString(makeSellOrderArgs.Amount)
+	if err != nil {
+		logrus.WithError(err).Errorln("failed to parse sell amount")
+		return
+	} else if makerAmountDec.LessThan(decimal.RequireFromString("0.0000001")) {
+		logrus.Errorln("Sell amount is too small, must be at least 0.0000001")
+		return
+	} else {
+		makerAmount = dec2big(makerAmountDec)
+	}
+
+	if price, err = decimal.NewFromString(makeSellOrderArgs.Price); err != nil {
+		logrus.WithError(err).Errorln("failed to parse sell price")
+		return
+	}
+	takerAmount = dec2big(makerAmountDec.Mul(price))
+
+	defaultAccount := common.HexToAddress(ctl.mustConfigValue("accounts.default"))
+
+	callArgs := &CallArgs{
+		Context:  ctx,
+		From:     defaultAccount,
+		FromPass: makeSellOrderArgs.SignPassword,
+		GasPrice: ctl.ethGasPrice,
+	}
+
+	exchangeAddress := ctl.ethClient.contractAddresses[EthContractExchange]
+	signedOrder, err := ctl.ethClient.CreateAndSignOrder(
+		callArgs,
+		makerAssetData,
+		takerAssetData,
+		makerAmount,
+		takerAmount,
+		exchangeAddress,
+	)
+	if err != nil {
+		logrus.WithError(err).Errorln("unable to sign order")
+		return
+	}
+
+	orderHash, err := ctl.relayerClient.PostOrder(ctx, signedOrder)
+	if err != nil {
+		logrus.WithError(err).Errorln("unable to post order")
 		return
 	}
 
@@ -226,35 +305,138 @@ func dec2big(d decimal.Decimal) *big.Int {
 }
 
 type TradeFillOrderArgs struct {
-	TakerToken   string
-	MakerToken   string
-	FillAmount   string
+	Market       string
 	OrderHash    string
+	FillAmount   string
 	SignPassword string
 }
 
 func (ctl *AppController) ActionTradeFillOrder(args interface{}) {
-	// meh
-}
+	fillOrderArgs := args.(*TradeFillOrderArgs)
 
-type TradeBuyArgs struct {
-	Market       string
-	Amount       string
-	SignPassword string
-}
+	ctx := context.Background()
+	ctx, cancelFn := context.WithTimeout(ctx, 30*time.Second)
+	defer cancelFn()
 
-func (ctl *AppController) ActionTradeBuy(args interface{}) {
-	fmt.Println("Sorry, automatic order matching is not ready yet.")
-}
+	tradePairs, err := ctl.relayerClient.TradePairs(ctx)
+	if err != nil {
+		logrus.WithError(err).Errorln("unable to fetch trade pairs")
+		return
+	}
 
-type TradeSellArgs struct {
-	Market       string
-	Amount       string
-	SignPassword string
-}
+	var marketPair *relayer.TradePair
+	for _, pair := range tradePairs {
+		if pair.Name != fillOrderArgs.Market {
+			continue
+		} else if !pair.Enabled {
+			continue
+		}
 
-func (ctl *AppController) ActionTradeSell(args interface{}) {
-	fmt.Println("Sorry, automatic order matching is not ready yet.")
+		marketPair = pair
+	}
+
+	if marketPair == nil {
+		logrus.WithFields(logrus.Fields{
+			"market": fillOrderArgs.Market,
+		}).Errorln("specified market not found or is not enabled")
+
+		return
+	}
+
+	makeOrder, err := ctl.relayerClient.Order(ctx, fillOrderArgs.OrderHash)
+	if err != nil {
+		logrus.WithFields(logrus.Fields{
+			"order": fillOrderArgs.OrderHash,
+		}).Errorln(err)
+		return
+	}
+
+	var isBid bool
+	if makeOrder.TakerAssetData == marketPair.MakerAssetData {
+		isBid = true
+	}
+
+	var fillAmount *big.Int
+	var price decimal.Decimal
+
+	fillAmountDec, err := decimal.NewFromString(fillOrderArgs.FillAmount)
+	if err != nil {
+		logrus.WithError(err).Errorln("failed to parse fill amount")
+		return
+	} else if fillAmountDec.LessThan(decimal.RequireFromString("0.0000001")) {
+		logrus.Errorln("fill amount is too small, must be at least 0.0000001")
+		return
+	} else {
+		fillAmount = dec2big(fillAmountDec)
+	}
+
+	price, vol := calcOrderPrice(makeOrder, isBid)
+	vol = vol.Shift(-18)
+
+	if fillAmountDec.GreaterThan(vol) {
+		err = fmt.Errorf("wrong fill amount: %s", fillAmountDec.StringFixed(9))
+		logrus.WithError(err).Errorf("maximum fill amount: %s", vol.StringFixed(9))
+		return
+	}
+
+	var makerAmount *big.Int
+	var takerAmount *big.Int
+	var makerAssetData []byte
+	var takerAssetData []byte
+
+	if isBid {
+		// maker must have fillAmount / price of quote currency
+		// taker must have fillAmount of base currency
+		makerAmount = dec2big(fillAmountDec.Div(price))
+		takerAmount = fillAmount
+
+		makerAssetData = common.FromHex(marketPair.TakerAssetData)
+		takerAssetData = common.FromHex(marketPair.MakerAssetData)
+	} else {
+		// maker must have fillAmount of base currency
+		// taker must have fillAmount * price of quote currency
+		makerAmount = fillAmount
+		takerAmount = dec2big(fillAmountDec.Mul(price))
+
+		makerAssetData = common.FromHex(marketPair.MakerAssetData)
+		takerAssetData = common.FromHex(marketPair.TakerAssetData)
+	}
+
+	defaultAccount := common.HexToAddress(ctl.mustConfigValue("accounts.default"))
+
+	callArgs := &CallArgs{
+		Context:  ctx,
+		From:     defaultAccount,
+		FromPass: fillOrderArgs.SignPassword,
+		GasPrice: ctl.ethGasPrice,
+	}
+
+	exchangeAddress := ctl.ethClient.contractAddresses[EthContractExchange]
+	signedTakeOrder, err := ctl.ethClient.CreateAndSignOrder(
+		callArgs,
+		makerAssetData,
+		takerAssetData,
+		makerAmount,
+		takerAmount,
+		exchangeAddress,
+	)
+	if err != nil {
+		logrus.WithError(err).Errorln("unable to sign order")
+		return
+	}
+
+	takeOrderHash, err := ctl.relayerClient.TakeOrder(ctx,
+		[]*relayer.Order{
+			makeOrder,
+		},
+		signedTakeOrder,
+	)
+	if err != nil {
+		logrus.WithError(err).Errorln("unable to post take order")
+		return
+	}
+
+	fmt.Println(takeOrderHash)
 }
 
 type TradeOrderbookArgs struct {
@@ -461,6 +643,7 @@ func (ctl *AppController) ActionTradeTokens() {
 
 func (ctl *AppController) ActionTradePairs() {
 	ctx := context.Background()
+
 	pairs, err := ctl.relayerClient.TradePairs(ctx)
 	if err != nil {
 		logrus.WithError(err).Errorln("failed to list trade pairs")
@@ -793,6 +976,48 @@ func (ctl *AppController) SuggestMarkets() []prompt.Suggest {
 
 		suggestions = append(suggestions, prompt.Suggest{
 			Text: pair.Name,
+		})
+	}
+
+	return suggestions
+}
+
+func (ctl *AppController) SuggestOrderToFill(pairName string) []prompt.Suggest {
+	ctx, cancelFn := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancelFn()
+
+	bids, asks, err := ctl.relayerClient.Orderbook(ctx, pairName)
+	if err != nil {
+		logrus.WithError(err).Warningln("failed to fetch orderbook")
+		return nil
+	}
+
+	suggestions := make([]prompt.Suggest, 0, len(bids.Records)+len(asks.Records))
+	for _, ask := range asks.Records {
+		// TODO: ignore own orders
+
+		zxOrder, _ := ro2zo(ask.Order)
+		orderHash, _ := zxOrder.ComputeOrderHash()
+		price, vol := calcOrderPrice(ask.Order, false)
+		vol = vol.Shift(-18)
+
+		suggestions = append(suggestions, prompt.Suggest{
+			Text:        orderHash.Hex(),
+			Description: fmt.Sprintf("[ASK] %s %s", price.StringFixed(6), vol.StringFixed(6)),
+		})
+	}
+
+	for _, bid := range bids.Records {
+		// TODO: ignore own orders
+
+		zxOrder, _ := ro2zo(bid.Order)
+		orderHash, _ := zxOrder.ComputeOrderHash()
+		price, vol := calcOrderPrice(bid.Order, true)
+		vol = vol.Shift(-18)
+
+		suggestions = append(suggestions, prompt.Suggest{
+			Text:        orderHash.Hex(),
+			Description: fmt.Sprintf("[BID] %s %s", price.StringFixed(6), vol.StringFixed(6)),
 		})
 	}
 
