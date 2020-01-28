@@ -489,9 +489,9 @@ type AssetPairsNotImplementedResponseBody struct {
 	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
 }
 
-// AssetPairsBadRequestResponseBody is the type of the "Relayer" service
-// "assetPairs" endpoint HTTP response body for the "bad_request" error.
-type AssetPairsBadRequestResponseBody struct {
+// AssetPairsValidationErrorResponseBody is the type of the "Relayer" service
+// "assetPairs" endpoint HTTP response body for the "validation_error" error.
+type AssetPairsValidationErrorResponseBody struct {
 	// General error code
 	Code *int `form:"code,omitempty" json:"code,omitempty" xml:"code,omitempty"`
 	// Error reason description
@@ -572,9 +572,9 @@ type OrdersNotImplementedResponseBody struct {
 	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
 }
 
-// OrdersBadRequestResponseBody is the type of the "Relayer" service "orders"
-// endpoint HTTP response body for the "bad_request" error.
-type OrdersBadRequestResponseBody struct {
+// OrdersValidationErrorResponseBody is the type of the "Relayer" service
+// "orders" endpoint HTTP response body for the "validation_error" error.
+type OrdersValidationErrorResponseBody struct {
 	// General error code
 	Code *int `form:"code,omitempty" json:"code,omitempty" xml:"code,omitempty"`
 	// Error reason description
@@ -655,9 +655,9 @@ type OrderByHashNotImplementedResponseBody struct {
 	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
 }
 
-// OrderByHashBadRequestResponseBody is the type of the "Relayer" service
-// "orderByHash" endpoint HTTP response body for the "bad_request" error.
-type OrderByHashBadRequestResponseBody struct {
+// OrderByHashValidationErrorResponseBody is the type of the "Relayer" service
+// "orderByHash" endpoint HTTP response body for the "validation_error" error.
+type OrderByHashValidationErrorResponseBody struct {
 	// General error code
 	Code *int `form:"code,omitempty" json:"code,omitempty" xml:"code,omitempty"`
 	// Error reason description
@@ -738,9 +738,9 @@ type OrderbookNotImplementedResponseBody struct {
 	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
 }
 
-// OrderbookBadRequestResponseBody is the type of the "Relayer" service
-// "orderbook" endpoint HTTP response body for the "bad_request" error.
-type OrderbookBadRequestResponseBody struct {
+// OrderbookValidationErrorResponseBody is the type of the "Relayer" service
+// "orderbook" endpoint HTTP response body for the "validation_error" error.
+type OrderbookValidationErrorResponseBody struct {
 	// General error code
 	Code *int `form:"code,omitempty" json:"code,omitempty" xml:"code,omitempty"`
 	// Error reason description
@@ -821,9 +821,9 @@ type OrderConfigNotImplementedResponseBody struct {
 	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
 }
 
-// OrderConfigBadRequestResponseBody is the type of the "Relayer" service
-// "orderConfig" endpoint HTTP response body for the "bad_request" error.
-type OrderConfigBadRequestResponseBody struct {
+// OrderConfigValidationErrorResponseBody is the type of the "Relayer" service
+// "orderConfig" endpoint HTTP response body for the "validation_error" error.
+type OrderConfigValidationErrorResponseBody struct {
 	// General error code
 	Code *int `form:"code,omitempty" json:"code,omitempty" xml:"code,omitempty"`
 	// Error reason description
@@ -904,9 +904,10 @@ type FeeRecipientsNotImplementedResponseBody struct {
 	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
 }
 
-// FeeRecipientsBadRequestResponseBody is the type of the "Relayer" service
-// "feeRecipients" endpoint HTTP response body for the "bad_request" error.
-type FeeRecipientsBadRequestResponseBody struct {
+// FeeRecipientsValidationErrorResponseBody is the type of the "Relayer"
+// service "feeRecipients" endpoint HTTP response body for the
+// "validation_error" error.
+type FeeRecipientsValidationErrorResponseBody struct {
 	// General error code
 	Code *int `form:"code,omitempty" json:"code,omitempty" xml:"code,omitempty"`
 	// Error reason description
@@ -987,9 +988,9 @@ type PostOrderNotImplementedResponseBody struct {
 	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
 }
 
-// PostOrderBadRequestResponseBody is the type of the "Relayer" service
-// "postOrder" endpoint HTTP response body for the "bad_request" error.
-type PostOrderBadRequestResponseBody struct {
+// PostOrderValidationErrorResponseBody is the type of the "Relayer" service
+// "postOrder" endpoint HTTP response body for the "validation_error" error.
+type PostOrderValidationErrorResponseBody struct {
 	// General error code
 	Code *int `form:"code,omitempty" json:"code,omitempty" xml:"code,omitempty"`
 	// Error reason description
@@ -1070,9 +1071,9 @@ type TakeOrderNotImplementedResponseBody struct {
 	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
 }
 
-// TakeOrderBadRequestResponseBody is the type of the "Relayer" service
-// "takeOrder" endpoint HTTP response body for the "bad_request" error.
-type TakeOrderBadRequestResponseBody struct {
+// TakeOrderValidationErrorResponseBody is the type of the "Relayer" service
+// "takeOrder" endpoint HTTP response body for the "validation_error" error.
+type TakeOrderValidationErrorResponseBody struct {
 	// General error code
 	Code *int `form:"code,omitempty" json:"code,omitempty" xml:"code,omitempty"`
 	// Error reason description
@@ -1154,9 +1155,10 @@ type GetActiveOrderNotImplementedResponseBody struct {
 	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
 }
 
-// GetActiveOrderBadRequestResponseBody is the type of the "Relayer" service
-// "getActiveOrder" endpoint HTTP response body for the "bad_request" error.
-type GetActiveOrderBadRequestResponseBody struct {
+// GetActiveOrderValidationErrorResponseBody is the type of the "Relayer"
+// service "getActiveOrder" endpoint HTTP response body for the
+// "validation_error" error.
+type GetActiveOrderValidationErrorResponseBody struct {
 	// General error code
 	Code *int `form:"code,omitempty" json:"code,omitempty" xml:"code,omitempty"`
 	// Error reason description
@@ -1238,9 +1240,10 @@ type GetArchiveOrderNotImplementedResponseBody struct {
 	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
 }
 
-// GetArchiveOrderBadRequestResponseBody is the type of the "Relayer" service
-// "getArchiveOrder" endpoint HTTP response body for the "bad_request" error.
-type GetArchiveOrderBadRequestResponseBody struct {
+// GetArchiveOrderValidationErrorResponseBody is the type of the "Relayer"
+// service "getArchiveOrder" endpoint HTTP response body for the
+// "validation_error" error.
+type GetArchiveOrderValidationErrorResponseBody struct {
 	// General error code
 	Code *int `form:"code,omitempty" json:"code,omitempty" xml:"code,omitempty"`
 	// Error reason description
@@ -1321,9 +1324,9 @@ type ListOrdersNotImplementedResponseBody struct {
 	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
 }
 
-// ListOrdersBadRequestResponseBody is the type of the "Relayer" service
-// "listOrders" endpoint HTTP response body for the "bad_request" error.
-type ListOrdersBadRequestResponseBody struct {
+// ListOrdersValidationErrorResponseBody is the type of the "Relayer" service
+// "listOrders" endpoint HTTP response body for the "validation_error" error.
+type ListOrdersValidationErrorResponseBody struct {
 	// General error code
 	Code *int `form:"code,omitempty" json:"code,omitempty" xml:"code,omitempty"`
 	// Error reason description
@@ -1404,9 +1407,9 @@ type GetTradePairNotImplementedResponseBody struct {
 	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
 }
 
-// GetTradePairBadRequestResponseBody is the type of the "Relayer" service
-// "getTradePair" endpoint HTTP response body for the "bad_request" error.
-type GetTradePairBadRequestResponseBody struct {
+// GetTradePairValidationErrorResponseBody is the type of the "Relayer" service
+// "getTradePair" endpoint HTTP response body for the "validation_error" error.
+type GetTradePairValidationErrorResponseBody struct {
 	// General error code
 	Code *int `form:"code,omitempty" json:"code,omitempty" xml:"code,omitempty"`
 	// Error reason description
@@ -1488,9 +1491,10 @@ type ListTradePairsNotImplementedResponseBody struct {
 	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
 }
 
-// ListTradePairsBadRequestResponseBody is the type of the "Relayer" service
-// "listTradePairs" endpoint HTTP response body for the "bad_request" error.
-type ListTradePairsBadRequestResponseBody struct {
+// ListTradePairsValidationErrorResponseBody is the type of the "Relayer"
+// service "listTradePairs" endpoint HTTP response body for the
+// "validation_error" error.
+type ListTradePairsValidationErrorResponseBody struct {
 	// General error code
 	Code *int `form:"code,omitempty" json:"code,omitempty" xml:"code,omitempty"`
 	// Error reason description
@@ -1571,9 +1575,9 @@ type GetAccountNotImplementedResponseBody struct {
 	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
 }
 
-// GetAccountBadRequestResponseBody is the type of the "Relayer" service
-// "getAccount" endpoint HTTP response body for the "bad_request" error.
-type GetAccountBadRequestResponseBody struct {
+// GetAccountValidationErrorResponseBody is the type of the "Relayer" service
+// "getAccount" endpoint HTTP response body for the "validation_error" error.
+type GetAccountValidationErrorResponseBody struct {
 	// General error code
 	Code *int `form:"code,omitempty" json:"code,omitempty" xml:"code,omitempty"`
 	// Error reason description
@@ -1655,9 +1659,10 @@ type GetOnlineAccountsNotImplementedResponseBody struct {
 	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
 }
 
-// GetOnlineAccountsBadRequestResponseBody is the type of the "Relayer" service
-// "getOnlineAccounts" endpoint HTTP response body for the "bad_request" error.
-type GetOnlineAccountsBadRequestResponseBody struct {
+// GetOnlineAccountsValidationErrorResponseBody is the type of the "Relayer"
+// service "getOnlineAccounts" endpoint HTTP response body for the
+// "validation_error" error.
+type GetOnlineAccountsValidationErrorResponseBody struct {
 	// General error code
 	Code *int `form:"code,omitempty" json:"code,omitempty" xml:"code,omitempty"`
 	// Error reason description
@@ -1739,10 +1744,10 @@ type GetEthTransactionsNotImplementedResponseBody struct {
 	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
 }
 
-// GetEthTransactionsBadRequestResponseBody is the type of the "Relayer"
+// GetEthTransactionsValidationErrorResponseBody is the type of the "Relayer"
 // service "getEthTransactions" endpoint HTTP response body for the
-// "bad_request" error.
-type GetEthTransactionsBadRequestResponseBody struct {
+// "validation_error" error.
+type GetEthTransactionsValidationErrorResponseBody struct {
 	// General error code
 	Code *int `form:"code,omitempty" json:"code,omitempty" xml:"code,omitempty"`
 	// Error reason description
@@ -2131,9 +2136,9 @@ func NewAssetPairsNotImplemented(body *AssetPairsNotImplementedResponseBody) *go
 	return v
 }
 
-// NewAssetPairsBadRequest builds a Relayer service assetPairs endpoint
-// bad_request error.
-func NewAssetPairsBadRequest(body *AssetPairsBadRequestResponseBody) *relayer.ErrorBadRequest {
+// NewAssetPairsValidationError builds a Relayer service assetPairs endpoint
+// validation_error error.
+func NewAssetPairsValidationError(body *AssetPairsValidationErrorResponseBody) *relayer.ErrorBadRequest {
 	v := &relayer.ErrorBadRequest{
 		Code:   *body.Code,
 		Reason: *body.Reason,
@@ -2220,9 +2225,9 @@ func NewOrdersNotImplemented(body *OrdersNotImplementedResponseBody) *goa.Servic
 	return v
 }
 
-// NewOrdersBadRequest builds a Relayer service orders endpoint bad_request
-// error.
-func NewOrdersBadRequest(body *OrdersBadRequestResponseBody) *relayer.ErrorBadRequest {
+// NewOrdersValidationError builds a Relayer service orders endpoint
+// validation_error error.
+func NewOrdersValidationError(body *OrdersValidationErrorResponseBody) *relayer.ErrorBadRequest {
 	v := &relayer.ErrorBadRequest{
 		Code:   *body.Code,
 		Reason: *body.Reason,
@@ -2307,9 +2312,9 @@ func NewOrderByHashNotImplemented(body *OrderByHashNotImplementedResponseBody) *
 	return v
 }
 
-// NewOrderByHashBadRequest builds a Relayer service orderByHash endpoint
-// bad_request error.
-func NewOrderByHashBadRequest(body *OrderByHashBadRequestResponseBody) *relayer.ErrorBadRequest {
+// NewOrderByHashValidationError builds a Relayer service orderByHash endpoint
+// validation_error error.
+func NewOrderByHashValidationError(body *OrderByHashValidationErrorResponseBody) *relayer.ErrorBadRequest {
 	v := &relayer.ErrorBadRequest{
 		Code:   *body.Code,
 		Reason: *body.Reason,
@@ -2396,9 +2401,9 @@ func NewOrderbookNotImplemented(body *OrderbookNotImplementedResponseBody) *goa.
 	return v
 }
 
-// NewOrderbookBadRequest builds a Relayer service orderbook endpoint
-// bad_request error.
-func NewOrderbookBadRequest(body *OrderbookBadRequestResponseBody) *relayer.ErrorBadRequest {
+// NewOrderbookValidationError builds a Relayer service orderbook endpoint
+// validation_error error.
+func NewOrderbookValidationError(body *OrderbookValidationErrorResponseBody) *relayer.ErrorBadRequest {
 	v := &relayer.ErrorBadRequest{
 		Code:   *body.Code,
 		Reason: *body.Reason,
@@ -2485,9 +2490,9 @@ func NewOrderConfigNotImplemented(body *OrderConfigNotImplementedResponseBody) *
 	return v
 }
 
-// NewOrderConfigBadRequest builds a Relayer service orderConfig endpoint
-// bad_request error.
-func NewOrderConfigBadRequest(body *OrderConfigBadRequestResponseBody) *relayer.ErrorBadRequest {
+// NewOrderConfigValidationError builds a Relayer service orderConfig endpoint
+// validation_error error.
+func NewOrderConfigValidationError(body *OrderConfigValidationErrorResponseBody) *relayer.ErrorBadRequest {
 	v := &relayer.ErrorBadRequest{
 		Code:   *body.Code,
 		Reason: *body.Reason,
@@ -2577,9 +2582,9 @@ func NewFeeRecipientsNotImplemented(body *FeeRecipientsNotImplementedResponseBod
 	return v
 }
 
-// NewFeeRecipientsBadRequest builds a Relayer service feeRecipients endpoint
-// bad_request error.
-func NewFeeRecipientsBadRequest(body *FeeRecipientsBadRequestResponseBody) *relayer.ErrorBadRequest {
+// NewFeeRecipientsValidationError builds a Relayer service feeRecipients
+// endpoint validation_error error.
+func NewFeeRecipientsValidationError(body *FeeRecipientsValidationErrorResponseBody) *relayer.ErrorBadRequest {
 	v := &relayer.ErrorBadRequest{
 		Code:   *body.Code,
 		Reason: *body.Reason,
@@ -2660,9 +2665,9 @@ func NewPostOrderNotImplemented(body *PostOrderNotImplementedResponseBody) *goa.
 	return v
 }
 
-// NewPostOrderBadRequest builds a Relayer service postOrder endpoint
-// bad_request error.
-func NewPostOrderBadRequest(body *PostOrderBadRequestResponseBody) *relayer.ErrorBadRequest {
+// NewPostOrderValidationError builds a Relayer service postOrder endpoint
+// validation_error error.
+func NewPostOrderValidationError(body *PostOrderValidationErrorResponseBody) *relayer.ErrorBadRequest {
 	v := &relayer.ErrorBadRequest{
 		Code:   *body.Code,
 		Reason: *body.Reason,
@@ -2743,9 +2748,9 @@ func NewTakeOrderNotImplemented(body *TakeOrderNotImplementedResponseBody) *goa.
 	return v
 }
 
-// NewTakeOrderBadRequest builds a Relayer service takeOrder endpoint
-// bad_request error.
-func NewTakeOrderBadRequest(body *TakeOrderBadRequestResponseBody) *relayer.ErrorBadRequest {
+// NewTakeOrderValidationError builds a Relayer service takeOrder endpoint
+// validation_error error.
+func NewTakeOrderValidationError(body *TakeOrderValidationErrorResponseBody) *relayer.ErrorBadRequest {
 	v := &relayer.ErrorBadRequest{
 		Code:   *body.Code,
 		Reason: *body.Reason,
@@ -2830,9 +2835,9 @@ func NewGetActiveOrderNotImplemented(body *GetActiveOrderNotImplementedResponseB
 	return v
 }
 
-// NewGetActiveOrderBadRequest builds a Relayer service getActiveOrder endpoint
-// bad_request error.
-func NewGetActiveOrderBadRequest(body *GetActiveOrderBadRequestResponseBody) *relayer.ErrorBadRequest {
+// NewGetActiveOrderValidationError builds a Relayer service getActiveOrder
+// endpoint validation_error error.
+func NewGetActiveOrderValidationError(body *GetActiveOrderValidationErrorResponseBody) *relayer.ErrorBadRequest {
 	v := &relayer.ErrorBadRequest{
 		Code:   *body.Code,
 		Reason: *body.Reason,
@@ -2917,9 +2922,9 @@ func NewGetArchiveOrderNotImplemented(body *GetArchiveOrderNotImplementedRespons
 	return v
 }
 
-// NewGetArchiveOrderBadRequest builds a Relayer service getArchiveOrder
-// endpoint bad_request error.
-func NewGetArchiveOrderBadRequest(body *GetArchiveOrderBadRequestResponseBody) *relayer.ErrorBadRequest {
+// NewGetArchiveOrderValidationError builds a Relayer service getArchiveOrder
+// endpoint validation_error error.
+func NewGetArchiveOrderValidationError(body *GetArchiveOrderValidationErrorResponseBody) *relayer.ErrorBadRequest {
 	v := &relayer.ErrorBadRequest{
 		Code:   *body.Code,
 		Reason: *body.Reason,
@@ -3013,9 +3018,9 @@ func NewListOrdersNotImplemented(body *ListOrdersNotImplementedResponseBody) *go
 	return v
 }
 
-// NewListOrdersBadRequest builds a Relayer service listOrders endpoint
-// bad_request error.
-func NewListOrdersBadRequest(body *ListOrdersBadRequestResponseBody) *relayer.ErrorBadRequest {
+// NewListOrdersValidationError builds a Relayer service listOrders endpoint
+// validation_error error.
+func NewListOrdersValidationError(body *ListOrdersValidationErrorResponseBody) *relayer.ErrorBadRequest {
 	v := &relayer.ErrorBadRequest{
 		Code:   *body.Code,
 		Reason: *body.Reason,
@@ -3100,9 +3105,9 @@ func NewGetTradePairNotImplemented(body *GetTradePairNotImplementedResponseBody)
 	return v
 }
 
-// NewGetTradePairBadRequest builds a Relayer service getTradePair endpoint
-// bad_request error.
-func NewGetTradePairBadRequest(body *GetTradePairBadRequestResponseBody) *relayer.ErrorBadRequest {
+// NewGetTradePairValidationError builds a Relayer service getTradePair
+// endpoint validation_error error.
+func NewGetTradePairValidationError(body *GetTradePairValidationErrorResponseBody) *relayer.ErrorBadRequest {
 	v := &relayer.ErrorBadRequest{
 		Code:   *body.Code,
 		Reason: *body.Reason,
@@ -3190,9 +3195,9 @@ func NewListTradePairsNotImplemented(body *ListTradePairsNotImplementedResponseB
 	return v
 }
 
-// NewListTradePairsBadRequest builds a Relayer service listTradePairs endpoint
-// bad_request error.
-func NewListTradePairsBadRequest(body *ListTradePairsBadRequestResponseBody) *relayer.ErrorBadRequest {
+// NewListTradePairsValidationError builds a Relayer service listTradePairs
+// endpoint validation_error error.
+func NewListTradePairsValidationError(body *ListTradePairsValidationErrorResponseBody) *relayer.ErrorBadRequest {
 	v := &relayer.ErrorBadRequest{
 		Code:   *body.Code,
 		Reason: *body.Reason,
@@ -3277,9 +3282,9 @@ func NewGetAccountNotImplemented(body *GetAccountNotImplementedResponseBody) *go
 	return v
 }
 
-// NewGetAccountBadRequest builds a Relayer service getAccount endpoint
-// bad_request error.
-func NewGetAccountBadRequest(body *GetAccountBadRequestResponseBody) *relayer.ErrorBadRequest {
+// NewGetAccountValidationError builds a Relayer service getAccount endpoint
+// validation_error error.
+func NewGetAccountValidationError(body *GetAccountValidationErrorResponseBody) *relayer.ErrorBadRequest {
 	v := &relayer.ErrorBadRequest{
 		Code:   *body.Code,
 		Reason: *body.Reason,
@@ -3367,9 +3372,9 @@ func NewGetOnlineAccountsNotImplemented(body *GetOnlineAccountsNotImplementedRes
 	return v
 }
 
-// NewGetOnlineAccountsBadRequest builds a Relayer service getOnlineAccounts
-// endpoint bad_request error.
-func NewGetOnlineAccountsBadRequest(body *GetOnlineAccountsBadRequestResponseBody) *relayer.ErrorBadRequest {
+// NewGetOnlineAccountsValidationError builds a Relayer service
+// getOnlineAccounts endpoint validation_error error.
+func NewGetOnlineAccountsValidationError(body *GetOnlineAccountsValidationErrorResponseBody) *relayer.ErrorBadRequest {
 	v := &relayer.ErrorBadRequest{
 		Code:   *body.Code,
 		Reason: *body.Reason,
@@ -3457,9 +3462,9 @@ func NewGetEthTransactionsNotImplemented(body *GetEthTransactionsNotImplementedR
 	return v
 }
 
-// NewGetEthTransactionsBadRequest builds a Relayer service getEthTransactions
-// endpoint bad_request error.
-func NewGetEthTransactionsBadRequest(body *GetEthTransactionsBadRequestResponseBody) *relayer.ErrorBadRequest {
+// NewGetEthTransactionsValidationError builds a Relayer service
+// getEthTransactions endpoint validation_error error.
+func NewGetEthTransactionsValidationError(body *GetEthTransactionsValidationErrorResponseBody) *relayer.ErrorBadRequest {
 	v := &relayer.ErrorBadRequest{
 		Code:   *body.Code,
 		Reason: *body.Reason,
@@ -3884,9 +3889,9 @@ func ValidateAssetPairsNotImplementedResponseBody(body *AssetPairsNotImplemented
 	return
 }
 
-// ValidateAssetPairsBadRequestResponseBody runs the validations defined on
-// assetPairs_bad_request_response_body
-func ValidateAssetPairsBadRequestResponseBody(body *AssetPairsBadRequestResponseBody) (err error) {
+// ValidateAssetPairsValidationErrorResponseBody runs the validations defined
+// on assetPairs_validation_error_response_body
+func ValidateAssetPairsValidationErrorResponseBody(body *AssetPairsValidationErrorResponseBody) (err error) {
 	if body.Code == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("code", "body"))
 	}
@@ -4009,9 +4014,9 @@ func ValidateOrdersNotImplementedResponseBody(body *OrdersNotImplementedResponse
 	return
 }
 
-// ValidateOrdersBadRequestResponseBody runs the validations defined on
-// orders_bad_request_response_body
-func ValidateOrdersBadRequestResponseBody(body *OrdersBadRequestResponseBody) (err error) {
+// ValidateOrdersValidationErrorResponseBody runs the validations defined on
+// orders_validation_error_response_body
+func ValidateOrdersValidationErrorResponseBody(body *OrdersValidationErrorResponseBody) (err error) {
 	if body.Code == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("code", "body"))
 	}
@@ -4134,9 +4139,9 @@ func ValidateOrderByHashNotImplementedResponseBody(body *OrderByHashNotImplement
 	return
 }
 
-// ValidateOrderByHashBadRequestResponseBody runs the validations defined on
-// orderByHash_bad_request_response_body
-func ValidateOrderByHashBadRequestResponseBody(body *OrderByHashBadRequestResponseBody) (err error) {
+// ValidateOrderByHashValidationErrorResponseBody runs the validations defined
+// on orderByHash_validation_error_response_body
+func ValidateOrderByHashValidationErrorResponseBody(body *OrderByHashValidationErrorResponseBody) (err error) {
 	if body.Code == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("code", "body"))
 	}
@@ -4259,9 +4264,9 @@ func ValidateOrderbookNotImplementedResponseBody(body *OrderbookNotImplementedRe
 	return
 }
 
-// ValidateOrderbookBadRequestResponseBody runs the validations defined on
-// orderbook_bad_request_response_body
-func ValidateOrderbookBadRequestResponseBody(body *OrderbookBadRequestResponseBody) (err error) {
+// ValidateOrderbookValidationErrorResponseBody runs the validations defined on
+// orderbook_validation_error_response_body
+func ValidateOrderbookValidationErrorResponseBody(body *OrderbookValidationErrorResponseBody) (err error) {
 	if body.Code == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("code", "body"))
 	}
@@ -4384,9 +4389,9 @@ func ValidateOrderConfigNotImplementedResponseBody(body *OrderConfigNotImplement
 	return
 }
 
-// ValidateOrderConfigBadRequestResponseBody runs the validations defined on
-// orderConfig_bad_request_response_body
-func ValidateOrderConfigBadRequestResponseBody(body *OrderConfigBadRequestResponseBody) (err error) {
+// ValidateOrderConfigValidationErrorResponseBody runs the validations defined
+// on orderConfig_validation_error_response_body
+func ValidateOrderConfigValidationErrorResponseBody(body *OrderConfigValidationErrorResponseBody) (err error) {
 	if body.Code == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("code", "body"))
 	}
@@ -4509,9 +4514,9 @@ func ValidateFeeRecipientsNotImplementedResponseBody(body *FeeRecipientsNotImple
 	return
 }
 
-// ValidateFeeRecipientsBadRequestResponseBody runs the validations defined on
-// feeRecipients_bad_request_response_body
-func ValidateFeeRecipientsBadRequestResponseBody(body *FeeRecipientsBadRequestResponseBody) (err error) {
+// ValidateFeeRecipientsValidationErrorResponseBody runs the validations
+// defined on feeRecipients_validation_error_response_body
+func ValidateFeeRecipientsValidationErrorResponseBody(body *FeeRecipientsValidationErrorResponseBody) (err error) {
 	if body.Code == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("code", "body"))
 	}
@@ -4634,9 +4639,9 @@ func ValidatePostOrderNotImplementedResponseBody(body *PostOrderNotImplementedRe
 	return
 }
 
-// ValidatePostOrderBadRequestResponseBody runs the validations defined on
-// postOrder_bad_request_response_body
-func ValidatePostOrderBadRequestResponseBody(body *PostOrderBadRequestResponseBody) (err error) {
+// ValidatePostOrderValidationErrorResponseBody runs the validations defined on
+// postOrder_validation_error_response_body
+func ValidatePostOrderValidationErrorResponseBody(body *PostOrderValidationErrorResponseBody) (err error) {
 	if body.Code == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("code", "body"))
 	}
@@ -4759,9 +4764,9 @@ func ValidateTakeOrderNotImplementedResponseBody(body *TakeOrderNotImplementedRe
 	return
 }
 
-// ValidateTakeOrderBadRequestResponseBody runs the validations defined on
-// takeOrder_bad_request_response_body
-func ValidateTakeOrderBadRequestResponseBody(body *TakeOrderBadRequestResponseBody) (err error) {
+// ValidateTakeOrderValidationErrorResponseBody runs the validations defined on
+// takeOrder_validation_error_response_body
+func ValidateTakeOrderValidationErrorResponseBody(body *TakeOrderValidationErrorResponseBody) (err error) {
 	if body.Code == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("code", "body"))
 	}
@@ -4884,9 +4889,9 @@ func ValidateGetActiveOrderNotImplementedResponseBody(body *GetActiveOrderNotImp
 	return
 }
 
-// ValidateGetActiveOrderBadRequestResponseBody runs the validations defined on
-// getActiveOrder_bad_request_response_body
-func ValidateGetActiveOrderBadRequestResponseBody(body *GetActiveOrderBadRequestResponseBody) (err error) {
+// ValidateGetActiveOrderValidationErrorResponseBody runs the validations
+// defined on getActiveOrder_validation_error_response_body
+func ValidateGetActiveOrderValidationErrorResponseBody(body *GetActiveOrderValidationErrorResponseBody) (err error) {
 	if body.Code == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("code", "body"))
 	}
@@ -5009,9 +5014,9 @@ func ValidateGetArchiveOrderNotImplementedResponseBody(body *GetArchiveOrderNotI
 	return
 }
 
-// ValidateGetArchiveOrderBadRequestResponseBody runs the validations defined
-// on getArchiveOrder_bad_request_response_body
-func ValidateGetArchiveOrderBadRequestResponseBody(body *GetArchiveOrderBadRequestResponseBody) (err error) {
+// ValidateGetArchiveOrderValidationErrorResponseBody runs the validations
+// defined on getArchiveOrder_validation_error_response_body
+func ValidateGetArchiveOrderValidationErrorResponseBody(body *GetArchiveOrderValidationErrorResponseBody) (err error) {
 	if body.Code == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("code", "body"))
 	}
@@ -5134,9 +5139,9 @@ func ValidateListOrdersNotImplementedResponseBody(body *ListOrdersNotImplemented
 	return
 }
 
-// ValidateListOrdersBadRequestResponseBody runs the validations defined on
-// listOrders_bad_request_response_body
-func ValidateListOrdersBadRequestResponseBody(body *ListOrdersBadRequestResponseBody) (err error) {
+// ValidateListOrdersValidationErrorResponseBody runs the validations defined
+// on listOrders_validation_error_response_body
+func ValidateListOrdersValidationErrorResponseBody(body *ListOrdersValidationErrorResponseBody) (err error) {
 	if body.Code == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("code", "body"))
 	}
@@ -5259,9 +5264,9 @@ func ValidateGetTradePairNotImplementedResponseBody(body *GetTradePairNotImpleme
 	return
 }
 
-// ValidateGetTradePairBadRequestResponseBody runs the validations defined on
-// getTradePair_bad_request_response_body
-func ValidateGetTradePairBadRequestResponseBody(body *GetTradePairBadRequestResponseBody) (err error) {
+// ValidateGetTradePairValidationErrorResponseBody runs the validations defined
+// on getTradePair_validation_error_response_body
+func ValidateGetTradePairValidationErrorResponseBody(body *GetTradePairValidationErrorResponseBody) (err error) {
 	if body.Code == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("code", "body"))
 	}
@@ -5384,9 +5389,9 @@ func ValidateListTradePairsNotImplementedResponseBody(body *ListTradePairsNotImp
 	return
 }
 
-// ValidateListTradePairsBadRequestResponseBody runs the validations defined on
-// listTradePairs_bad_request_response_body
-func ValidateListTradePairsBadRequestResponseBody(body *ListTradePairsBadRequestResponseBody) (err error) {
+// ValidateListTradePairsValidationErrorResponseBody runs the validations
+// defined on listTradePairs_validation_error_response_body
+func ValidateListTradePairsValidationErrorResponseBody(body *ListTradePairsValidationErrorResponseBody) (err error) {
 	if body.Code == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("code", "body"))
 	}
@@ -5509,9 +5514,9 @@ func ValidateGetAccountNotImplementedResponseBody(body *GetAccountNotImplemented
 	return
 }
 
-// ValidateGetAccountBadRequestResponseBody runs the validations defined on
-// getAccount_bad_request_response_body
-func ValidateGetAccountBadRequestResponseBody(body *GetAccountBadRequestResponseBody) (err error) {
+// ValidateGetAccountValidationErrorResponseBody runs the validations defined
+// on getAccount_validation_error_response_body
+func ValidateGetAccountValidationErrorResponseBody(body *GetAccountValidationErrorResponseBody) (err error) {
 	if body.Code == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("code", "body"))
 	}
@@ -5634,9 +5639,9 @@ func ValidateGetOnlineAccountsNotImplementedResponseBody(body *GetOnlineAccounts
 	return
 }
 
-// ValidateGetOnlineAccountsBadRequestResponseBody runs the validations defined
-// on getOnlineAccounts_bad_request_response_body
-func ValidateGetOnlineAccountsBadRequestResponseBody(body *GetOnlineAccountsBadRequestResponseBody) (err error) {
+// ValidateGetOnlineAccountsValidationErrorResponseBody runs the validations
+// defined on getOnlineAccounts_validation_error_response_body
+func ValidateGetOnlineAccountsValidationErrorResponseBody(body *GetOnlineAccountsValidationErrorResponseBody) (err error) {
 	if body.Code == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("code", "body"))
 	}
@@ -5759,9 +5764,9 @@ func ValidateGetEthTransactionsNotImplementedResponseBody(body *GetEthTransactio
 	return
 }
 
-// ValidateGetEthTransactionsBadRequestResponseBody runs the validations
-// defined on getEthTransactions_bad_request_response_body
-func ValidateGetEthTransactionsBadRequestResponseBody(body *GetEthTransactionsBadRequestResponseBody) (err error) {
+// ValidateGetEthTransactionsValidationErrorResponseBody runs the validations
+// defined on getEthTransactions_validation_error_response_body
+func ValidateGetEthTransactionsValidationErrorResponseBody(body *GetEthTransactionsValidationErrorResponseBody) (err error) {
 	if body.Code == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("code", "body"))
 	}

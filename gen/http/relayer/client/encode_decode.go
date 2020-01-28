@@ -62,7 +62,7 @@ func EncodeAssetPairsRequest(encoder func(*http.Request) goahttp.Encoder) func(*
 //	- "rate_limit" (type *goa.ServiceError): http.StatusTooManyRequests
 //	- "internal" (type *goa.ServiceError): http.StatusInternalServerError
 //	- "not_implemented" (type *goa.ServiceError): http.StatusNotImplemented
-//	- "bad_request" (type *relayer.ErrorBadRequest): http.StatusBadRequest
+//	- "validation_error" (type *relayer.ErrorBadRequest): http.StatusExpectationFailed
 //	- error: internal error
 func DecodeAssetPairsResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
 	return func(resp *http.Response) (interface{}, error) {
@@ -150,20 +150,20 @@ func DecodeAssetPairsResponse(decoder func(*http.Response) goahttp.Decoder, rest
 				return nil, goahttp.ErrValidationError("Relayer", "assetPairs", err)
 			}
 			return nil, NewAssetPairsNotImplemented(&body)
-		case http.StatusBadRequest:
+		case http.StatusExpectationFailed:
 			var (
-				body AssetPairsBadRequestResponseBody
+				body AssetPairsValidationErrorResponseBody
 				err  error
 			)
 			err = decoder(resp).Decode(&body)
 			if err != nil {
 				return nil, goahttp.ErrDecodingError("Relayer", "assetPairs", err)
 			}
-			err = ValidateAssetPairsBadRequestResponseBody(&body)
+			err = ValidateAssetPairsValidationErrorResponseBody(&body)
 			if err != nil {
 				return nil, goahttp.ErrValidationError("Relayer", "assetPairs", err)
 			}
-			return nil, NewAssetPairsBadRequest(&body)
+			return nil, NewAssetPairsValidationError(&body)
 		default:
 			body, _ := ioutil.ReadAll(resp.Body)
 			return nil, goahttp.ErrInvalidResponse("Relayer", "assetPairs", resp.StatusCode, string(body))
@@ -251,7 +251,7 @@ func EncodeOrdersRequest(encoder func(*http.Request) goahttp.Encoder) func(*http
 //	- "rate_limit" (type *goa.ServiceError): http.StatusTooManyRequests
 //	- "internal" (type *goa.ServiceError): http.StatusInternalServerError
 //	- "not_implemented" (type *goa.ServiceError): http.StatusNotImplemented
-//	- "bad_request" (type *relayer.ErrorBadRequest): http.StatusBadRequest
+//	- "validation_error" (type *relayer.ErrorBadRequest): http.StatusExpectationFailed
 //	- error: internal error
 func DecodeOrdersResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
 	return func(resp *http.Response) (interface{}, error) {
@@ -339,20 +339,20 @@ func DecodeOrdersResponse(decoder func(*http.Response) goahttp.Decoder, restoreB
 				return nil, goahttp.ErrValidationError("Relayer", "orders", err)
 			}
 			return nil, NewOrdersNotImplemented(&body)
-		case http.StatusBadRequest:
+		case http.StatusExpectationFailed:
 			var (
-				body OrdersBadRequestResponseBody
+				body OrdersValidationErrorResponseBody
 				err  error
 			)
 			err = decoder(resp).Decode(&body)
 			if err != nil {
 				return nil, goahttp.ErrDecodingError("Relayer", "orders", err)
 			}
-			err = ValidateOrdersBadRequestResponseBody(&body)
+			err = ValidateOrdersValidationErrorResponseBody(&body)
 			if err != nil {
 				return nil, goahttp.ErrValidationError("Relayer", "orders", err)
 			}
-			return nil, NewOrdersBadRequest(&body)
+			return nil, NewOrdersValidationError(&body)
 		default:
 			body, _ := ioutil.ReadAll(resp.Body)
 			return nil, goahttp.ErrInvalidResponse("Relayer", "orders", resp.StatusCode, string(body))
@@ -393,7 +393,7 @@ func (c *Client) BuildOrderByHashRequest(ctx context.Context, v interface{}) (*h
 //	- "rate_limit" (type *goa.ServiceError): http.StatusTooManyRequests
 //	- "internal" (type *goa.ServiceError): http.StatusInternalServerError
 //	- "not_implemented" (type *goa.ServiceError): http.StatusNotImplemented
-//	- "bad_request" (type *relayer.ErrorBadRequest): http.StatusBadRequest
+//	- "validation_error" (type *relayer.ErrorBadRequest): http.StatusExpectationFailed
 //	- error: internal error
 func DecodeOrderByHashResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
 	return func(resp *http.Response) (interface{}, error) {
@@ -481,20 +481,20 @@ func DecodeOrderByHashResponse(decoder func(*http.Response) goahttp.Decoder, res
 				return nil, goahttp.ErrValidationError("Relayer", "orderByHash", err)
 			}
 			return nil, NewOrderByHashNotImplemented(&body)
-		case http.StatusBadRequest:
+		case http.StatusExpectationFailed:
 			var (
-				body OrderByHashBadRequestResponseBody
+				body OrderByHashValidationErrorResponseBody
 				err  error
 			)
 			err = decoder(resp).Decode(&body)
 			if err != nil {
 				return nil, goahttp.ErrDecodingError("Relayer", "orderByHash", err)
 			}
-			err = ValidateOrderByHashBadRequestResponseBody(&body)
+			err = ValidateOrderByHashValidationErrorResponseBody(&body)
 			if err != nil {
 				return nil, goahttp.ErrValidationError("Relayer", "orderByHash", err)
 			}
-			return nil, NewOrderByHashBadRequest(&body)
+			return nil, NewOrderByHashValidationError(&body)
 		default:
 			body, _ := ioutil.ReadAll(resp.Body)
 			return nil, goahttp.ErrInvalidResponse("Relayer", "orderByHash", resp.StatusCode, string(body))
@@ -541,7 +541,7 @@ func EncodeOrderbookRequest(encoder func(*http.Request) goahttp.Encoder) func(*h
 //	- "rate_limit" (type *goa.ServiceError): http.StatusTooManyRequests
 //	- "internal" (type *goa.ServiceError): http.StatusInternalServerError
 //	- "not_implemented" (type *goa.ServiceError): http.StatusNotImplemented
-//	- "bad_request" (type *relayer.ErrorBadRequest): http.StatusBadRequest
+//	- "validation_error" (type *relayer.ErrorBadRequest): http.StatusExpectationFailed
 //	- error: internal error
 func DecodeOrderbookResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
 	return func(resp *http.Response) (interface{}, error) {
@@ -629,20 +629,20 @@ func DecodeOrderbookResponse(decoder func(*http.Response) goahttp.Decoder, resto
 				return nil, goahttp.ErrValidationError("Relayer", "orderbook", err)
 			}
 			return nil, NewOrderbookNotImplemented(&body)
-		case http.StatusBadRequest:
+		case http.StatusExpectationFailed:
 			var (
-				body OrderbookBadRequestResponseBody
+				body OrderbookValidationErrorResponseBody
 				err  error
 			)
 			err = decoder(resp).Decode(&body)
 			if err != nil {
 				return nil, goahttp.ErrDecodingError("Relayer", "orderbook", err)
 			}
-			err = ValidateOrderbookBadRequestResponseBody(&body)
+			err = ValidateOrderbookValidationErrorResponseBody(&body)
 			if err != nil {
 				return nil, goahttp.ErrValidationError("Relayer", "orderbook", err)
 			}
-			return nil, NewOrderbookBadRequest(&body)
+			return nil, NewOrderbookValidationError(&body)
 		default:
 			body, _ := ioutil.ReadAll(resp.Body)
 			return nil, goahttp.ErrInvalidResponse("Relayer", "orderbook", resp.StatusCode, string(body))
@@ -689,7 +689,7 @@ func EncodeOrderConfigRequest(encoder func(*http.Request) goahttp.Encoder) func(
 //	- "rate_limit" (type *goa.ServiceError): http.StatusTooManyRequests
 //	- "internal" (type *goa.ServiceError): http.StatusInternalServerError
 //	- "not_implemented" (type *goa.ServiceError): http.StatusNotImplemented
-//	- "bad_request" (type *relayer.ErrorBadRequest): http.StatusBadRequest
+//	- "validation_error" (type *relayer.ErrorBadRequest): http.StatusExpectationFailed
 //	- error: internal error
 func DecodeOrderConfigResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
 	return func(resp *http.Response) (interface{}, error) {
@@ -777,20 +777,20 @@ func DecodeOrderConfigResponse(decoder func(*http.Response) goahttp.Decoder, res
 				return nil, goahttp.ErrValidationError("Relayer", "orderConfig", err)
 			}
 			return nil, NewOrderConfigNotImplemented(&body)
-		case http.StatusBadRequest:
+		case http.StatusExpectationFailed:
 			var (
-				body OrderConfigBadRequestResponseBody
+				body OrderConfigValidationErrorResponseBody
 				err  error
 			)
 			err = decoder(resp).Decode(&body)
 			if err != nil {
 				return nil, goahttp.ErrDecodingError("Relayer", "orderConfig", err)
 			}
-			err = ValidateOrderConfigBadRequestResponseBody(&body)
+			err = ValidateOrderConfigValidationErrorResponseBody(&body)
 			if err != nil {
 				return nil, goahttp.ErrValidationError("Relayer", "orderConfig", err)
 			}
-			return nil, NewOrderConfigBadRequest(&body)
+			return nil, NewOrderConfigValidationError(&body)
 		default:
 			body, _ := ioutil.ReadAll(resp.Body)
 			return nil, goahttp.ErrInvalidResponse("Relayer", "orderConfig", resp.StatusCode, string(body))
@@ -821,7 +821,7 @@ func (c *Client) BuildFeeRecipientsRequest(ctx context.Context, v interface{}) (
 //	- "rate_limit" (type *goa.ServiceError): http.StatusTooManyRequests
 //	- "internal" (type *goa.ServiceError): http.StatusInternalServerError
 //	- "not_implemented" (type *goa.ServiceError): http.StatusNotImplemented
-//	- "bad_request" (type *relayer.ErrorBadRequest): http.StatusBadRequest
+//	- "validation_error" (type *relayer.ErrorBadRequest): http.StatusExpectationFailed
 //	- error: internal error
 func DecodeFeeRecipientsResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
 	return func(resp *http.Response) (interface{}, error) {
@@ -909,20 +909,20 @@ func DecodeFeeRecipientsResponse(decoder func(*http.Response) goahttp.Decoder, r
 				return nil, goahttp.ErrValidationError("Relayer", "feeRecipients", err)
 			}
 			return nil, NewFeeRecipientsNotImplemented(&body)
-		case http.StatusBadRequest:
+		case http.StatusExpectationFailed:
 			var (
-				body FeeRecipientsBadRequestResponseBody
+				body FeeRecipientsValidationErrorResponseBody
 				err  error
 			)
 			err = decoder(resp).Decode(&body)
 			if err != nil {
 				return nil, goahttp.ErrDecodingError("Relayer", "feeRecipients", err)
 			}
-			err = ValidateFeeRecipientsBadRequestResponseBody(&body)
+			err = ValidateFeeRecipientsValidationErrorResponseBody(&body)
 			if err != nil {
 				return nil, goahttp.ErrValidationError("Relayer", "feeRecipients", err)
 			}
-			return nil, NewFeeRecipientsBadRequest(&body)
+			return nil, NewFeeRecipientsValidationError(&body)
 		default:
 			body, _ := ioutil.ReadAll(resp.Body)
 			return nil, goahttp.ErrInvalidResponse("Relayer", "feeRecipients", resp.StatusCode, string(body))
@@ -969,7 +969,7 @@ func EncodePostOrderRequest(encoder func(*http.Request) goahttp.Encoder) func(*h
 //	- "rate_limit" (type *goa.ServiceError): http.StatusTooManyRequests
 //	- "internal" (type *goa.ServiceError): http.StatusInternalServerError
 //	- "not_implemented" (type *goa.ServiceError): http.StatusNotImplemented
-//	- "bad_request" (type *relayer.ErrorBadRequest): http.StatusBadRequest
+//	- "validation_error" (type *relayer.ErrorBadRequest): http.StatusExpectationFailed
 //	- error: internal error
 func DecodePostOrderResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
 	return func(resp *http.Response) (interface{}, error) {
@@ -1053,20 +1053,20 @@ func DecodePostOrderResponse(decoder func(*http.Response) goahttp.Decoder, resto
 				return nil, goahttp.ErrValidationError("Relayer", "postOrder", err)
 			}
 			return nil, NewPostOrderNotImplemented(&body)
-		case http.StatusBadRequest:
+		case http.StatusExpectationFailed:
 			var (
-				body PostOrderBadRequestResponseBody
+				body PostOrderValidationErrorResponseBody
 				err  error
 			)
 			err = decoder(resp).Decode(&body)
 			if err != nil {
 				return nil, goahttp.ErrDecodingError("Relayer", "postOrder", err)
 			}
-			err = ValidatePostOrderBadRequestResponseBody(&body)
+			err = ValidatePostOrderValidationErrorResponseBody(&body)
 			if err != nil {
 				return nil, goahttp.ErrValidationError("Relayer", "postOrder", err)
 			}
-			return nil, NewPostOrderBadRequest(&body)
+			return nil, NewPostOrderValidationError(&body)
 		default:
 			body, _ := ioutil.ReadAll(resp.Body)
 			return nil, goahttp.ErrInvalidResponse("Relayer", "postOrder", resp.StatusCode, string(body))
@@ -1113,7 +1113,7 @@ func EncodeTakeOrderRequest(encoder func(*http.Request) goahttp.Encoder) func(*h
 //	- "rate_limit" (type *goa.ServiceError): http.StatusTooManyRequests
 //	- "internal" (type *goa.ServiceError): http.StatusInternalServerError
 //	- "not_implemented" (type *goa.ServiceError): http.StatusNotImplemented
-//	- "bad_request" (type *relayer.ErrorBadRequest): http.StatusBadRequest
+//	- "validation_error" (type *relayer.ErrorBadRequest): http.StatusExpectationFailed
 //	- error: internal error
 func DecodeTakeOrderResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
 	return func(resp *http.Response) (interface{}, error) {
@@ -1197,20 +1197,20 @@ func DecodeTakeOrderResponse(decoder func(*http.Response) goahttp.Decoder, resto
 				return nil, goahttp.ErrValidationError("Relayer", "takeOrder", err)
 			}
 			return nil, NewTakeOrderNotImplemented(&body)
-		case http.StatusBadRequest:
+		case http.StatusExpectationFailed:
 			var (
-				body TakeOrderBadRequestResponseBody
+				body TakeOrderValidationErrorResponseBody
 				err  error
 			)
 			err = decoder(resp).Decode(&body)
 			if err != nil {
 				return nil, goahttp.ErrDecodingError("Relayer", "takeOrder", err)
 			}
-			err = ValidateTakeOrderBadRequestResponseBody(&body)
+			err = ValidateTakeOrderValidationErrorResponseBody(&body)
 			if err != nil {
 				return nil, goahttp.ErrValidationError("Relayer", "takeOrder", err)
 			}
-			return nil, NewTakeOrderBadRequest(&body)
+			return nil, NewTakeOrderValidationError(&body)
 		default:
 			body, _ := ioutil.ReadAll(resp.Body)
 			return nil, goahttp.ErrInvalidResponse("Relayer", "takeOrder", resp.StatusCode, string(body))
@@ -1256,7 +1256,7 @@ func EncodeGetActiveOrderRequest(encoder func(*http.Request) goahttp.Encoder) fu
 //	- "rate_limit" (type *goa.ServiceError): http.StatusTooManyRequests
 //	- "internal" (type *goa.ServiceError): http.StatusInternalServerError
 //	- "not_implemented" (type *goa.ServiceError): http.StatusNotImplemented
-//	- "bad_request" (type *relayer.ErrorBadRequest): http.StatusBadRequest
+//	- "validation_error" (type *relayer.ErrorBadRequest): http.StatusExpectationFailed
 //	- error: internal error
 func DecodeGetActiveOrderResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
 	return func(resp *http.Response) (interface{}, error) {
@@ -1344,20 +1344,20 @@ func DecodeGetActiveOrderResponse(decoder func(*http.Response) goahttp.Decoder, 
 				return nil, goahttp.ErrValidationError("Relayer", "getActiveOrder", err)
 			}
 			return nil, NewGetActiveOrderNotImplemented(&body)
-		case http.StatusBadRequest:
+		case http.StatusExpectationFailed:
 			var (
-				body GetActiveOrderBadRequestResponseBody
+				body GetActiveOrderValidationErrorResponseBody
 				err  error
 			)
 			err = decoder(resp).Decode(&body)
 			if err != nil {
 				return nil, goahttp.ErrDecodingError("Relayer", "getActiveOrder", err)
 			}
-			err = ValidateGetActiveOrderBadRequestResponseBody(&body)
+			err = ValidateGetActiveOrderValidationErrorResponseBody(&body)
 			if err != nil {
 				return nil, goahttp.ErrValidationError("Relayer", "getActiveOrder", err)
 			}
-			return nil, NewGetActiveOrderBadRequest(&body)
+			return nil, NewGetActiveOrderValidationError(&body)
 		default:
 			body, _ := ioutil.ReadAll(resp.Body)
 			return nil, goahttp.ErrInvalidResponse("Relayer", "getActiveOrder", resp.StatusCode, string(body))
@@ -1403,7 +1403,7 @@ func EncodeGetArchiveOrderRequest(encoder func(*http.Request) goahttp.Encoder) f
 //	- "rate_limit" (type *goa.ServiceError): http.StatusTooManyRequests
 //	- "internal" (type *goa.ServiceError): http.StatusInternalServerError
 //	- "not_implemented" (type *goa.ServiceError): http.StatusNotImplemented
-//	- "bad_request" (type *relayer.ErrorBadRequest): http.StatusBadRequest
+//	- "validation_error" (type *relayer.ErrorBadRequest): http.StatusExpectationFailed
 //	- error: internal error
 func DecodeGetArchiveOrderResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
 	return func(resp *http.Response) (interface{}, error) {
@@ -1491,20 +1491,20 @@ func DecodeGetArchiveOrderResponse(decoder func(*http.Response) goahttp.Decoder,
 				return nil, goahttp.ErrValidationError("Relayer", "getArchiveOrder", err)
 			}
 			return nil, NewGetArchiveOrderNotImplemented(&body)
-		case http.StatusBadRequest:
+		case http.StatusExpectationFailed:
 			var (
-				body GetArchiveOrderBadRequestResponseBody
+				body GetArchiveOrderValidationErrorResponseBody
 				err  error
 			)
 			err = decoder(resp).Decode(&body)
 			if err != nil {
 				return nil, goahttp.ErrDecodingError("Relayer", "getArchiveOrder", err)
 			}
-			err = ValidateGetArchiveOrderBadRequestResponseBody(&body)
+			err = ValidateGetArchiveOrderValidationErrorResponseBody(&body)
 			if err != nil {
 				return nil, goahttp.ErrValidationError("Relayer", "getArchiveOrder", err)
 			}
-			return nil, NewGetArchiveOrderBadRequest(&body)
+			return nil, NewGetArchiveOrderValidationError(&body)
 		default:
 			body, _ := ioutil.ReadAll(resp.Body)
 			return nil, goahttp.ErrInvalidResponse("Relayer", "getArchiveOrder", resp.StatusCode, string(body))
@@ -1551,7 +1551,7 @@ func EncodeListOrdersRequest(encoder func(*http.Request) goahttp.Encoder) func(*
 //	- "rate_limit" (type *goa.ServiceError): http.StatusTooManyRequests
 //	- "internal" (type *goa.ServiceError): http.StatusInternalServerError
 //	- "not_implemented" (type *goa.ServiceError): http.StatusNotImplemented
-//	- "bad_request" (type *relayer.ErrorBadRequest): http.StatusBadRequest
+//	- "validation_error" (type *relayer.ErrorBadRequest): http.StatusExpectationFailed
 //	- error: internal error
 func DecodeListOrdersResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
 	return func(resp *http.Response) (interface{}, error) {
@@ -1639,20 +1639,20 @@ func DecodeListOrdersResponse(decoder func(*http.Response) goahttp.Decoder, rest
 				return nil, goahttp.ErrValidationError("Relayer", "listOrders", err)
 			}
 			return nil, NewListOrdersNotImplemented(&body)
-		case http.StatusBadRequest:
+		case http.StatusExpectationFailed:
 			var (
-				body ListOrdersBadRequestResponseBody
+				body ListOrdersValidationErrorResponseBody
 				err  error
 			)
 			err = decoder(resp).Decode(&body)
 			if err != nil {
 				return nil, goahttp.ErrDecodingError("Relayer", "listOrders", err)
 			}
-			err = ValidateListOrdersBadRequestResponseBody(&body)
+			err = ValidateListOrdersValidationErrorResponseBody(&body)
 			if err != nil {
 				return nil, goahttp.ErrValidationError("Relayer", "listOrders", err)
 			}
-			return nil, NewListOrdersBadRequest(&body)
+			return nil, NewListOrdersValidationError(&body)
 		default:
 			body, _ := ioutil.ReadAll(resp.Body)
 			return nil, goahttp.ErrInvalidResponse("Relayer", "listOrders", resp.StatusCode, string(body))
@@ -1709,7 +1709,7 @@ func EncodeGetTradePairRequest(encoder func(*http.Request) goahttp.Encoder) func
 //	- "rate_limit" (type *goa.ServiceError): http.StatusTooManyRequests
 //	- "internal" (type *goa.ServiceError): http.StatusInternalServerError
 //	- "not_implemented" (type *goa.ServiceError): http.StatusNotImplemented
-//	- "bad_request" (type *relayer.ErrorBadRequest): http.StatusBadRequest
+//	- "validation_error" (type *relayer.ErrorBadRequest): http.StatusExpectationFailed
 //	- error: internal error
 func DecodeGetTradePairResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
 	return func(resp *http.Response) (interface{}, error) {
@@ -1797,20 +1797,20 @@ func DecodeGetTradePairResponse(decoder func(*http.Response) goahttp.Decoder, re
 				return nil, goahttp.ErrValidationError("Relayer", "getTradePair", err)
 			}
 			return nil, NewGetTradePairNotImplemented(&body)
-		case http.StatusBadRequest:
+		case http.StatusExpectationFailed:
 			var (
-				body GetTradePairBadRequestResponseBody
+				body GetTradePairValidationErrorResponseBody
 				err  error
 			)
 			err = decoder(resp).Decode(&body)
 			if err != nil {
 				return nil, goahttp.ErrDecodingError("Relayer", "getTradePair", err)
 			}
-			err = ValidateGetTradePairBadRequestResponseBody(&body)
+			err = ValidateGetTradePairValidationErrorResponseBody(&body)
 			if err != nil {
 				return nil, goahttp.ErrValidationError("Relayer", "getTradePair", err)
 			}
-			return nil, NewGetTradePairBadRequest(&body)
+			return nil, NewGetTradePairValidationError(&body)
 		default:
 			body, _ := ioutil.ReadAll(resp.Body)
 			return nil, goahttp.ErrInvalidResponse("Relayer", "getTradePair", resp.StatusCode, string(body))
@@ -1857,7 +1857,7 @@ func EncodeListTradePairsRequest(encoder func(*http.Request) goahttp.Encoder) fu
 //	- "rate_limit" (type *goa.ServiceError): http.StatusTooManyRequests
 //	- "internal" (type *goa.ServiceError): http.StatusInternalServerError
 //	- "not_implemented" (type *goa.ServiceError): http.StatusNotImplemented
-//	- "bad_request" (type *relayer.ErrorBadRequest): http.StatusBadRequest
+//	- "validation_error" (type *relayer.ErrorBadRequest): http.StatusExpectationFailed
 //	- error: internal error
 func DecodeListTradePairsResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
 	return func(resp *http.Response) (interface{}, error) {
@@ -1945,20 +1945,20 @@ func DecodeListTradePairsResponse(decoder func(*http.Response) goahttp.Decoder, 
 				return nil, goahttp.ErrValidationError("Relayer", "listTradePairs", err)
 			}
 			return nil, NewListTradePairsNotImplemented(&body)
-		case http.StatusBadRequest:
+		case http.StatusExpectationFailed:
 			var (
-				body ListTradePairsBadRequestResponseBody
+				body ListTradePairsValidationErrorResponseBody
 				err  error
 			)
 			err = decoder(resp).Decode(&body)
 			if err != nil {
 				return nil, goahttp.ErrDecodingError("Relayer", "listTradePairs", err)
 			}
-			err = ValidateListTradePairsBadRequestResponseBody(&body)
+			err = ValidateListTradePairsValidationErrorResponseBody(&body)
 			if err != nil {
 				return nil, goahttp.ErrValidationError("Relayer", "listTradePairs", err)
 			}
-			return nil, NewListTradePairsBadRequest(&body)
+			return nil, NewListTradePairsValidationError(&body)
 		default:
 			body, _ := ioutil.ReadAll(resp.Body)
 			return nil, goahttp.ErrInvalidResponse("Relayer", "listTradePairs", resp.StatusCode, string(body))
@@ -2004,7 +2004,7 @@ func EncodeGetAccountRequest(encoder func(*http.Request) goahttp.Encoder) func(*
 //	- "rate_limit" (type *goa.ServiceError): http.StatusTooManyRequests
 //	- "internal" (type *goa.ServiceError): http.StatusInternalServerError
 //	- "not_implemented" (type *goa.ServiceError): http.StatusNotImplemented
-//	- "bad_request" (type *relayer.ErrorBadRequest): http.StatusBadRequest
+//	- "validation_error" (type *relayer.ErrorBadRequest): http.StatusExpectationFailed
 //	- error: internal error
 func DecodeGetAccountResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
 	return func(resp *http.Response) (interface{}, error) {
@@ -2092,20 +2092,20 @@ func DecodeGetAccountResponse(decoder func(*http.Response) goahttp.Decoder, rest
 				return nil, goahttp.ErrValidationError("Relayer", "getAccount", err)
 			}
 			return nil, NewGetAccountNotImplemented(&body)
-		case http.StatusBadRequest:
+		case http.StatusExpectationFailed:
 			var (
-				body GetAccountBadRequestResponseBody
+				body GetAccountValidationErrorResponseBody
 				err  error
 			)
 			err = decoder(resp).Decode(&body)
 			if err != nil {
 				return nil, goahttp.ErrDecodingError("Relayer", "getAccount", err)
 			}
-			err = ValidateGetAccountBadRequestResponseBody(&body)
+			err = ValidateGetAccountValidationErrorResponseBody(&body)
 			if err != nil {
 				return nil, goahttp.ErrValidationError("Relayer", "getAccount", err)
 			}
-			return nil, NewGetAccountBadRequest(&body)
+			return nil, NewGetAccountValidationError(&body)
 		default:
 			body, _ := ioutil.ReadAll(resp.Body)
 			return nil, goahttp.ErrInvalidResponse("Relayer", "getAccount", resp.StatusCode, string(body))
@@ -2156,7 +2156,7 @@ func EncodeGetOnlineAccountsRequest(encoder func(*http.Request) goahttp.Encoder)
 //	- "rate_limit" (type *goa.ServiceError): http.StatusTooManyRequests
 //	- "internal" (type *goa.ServiceError): http.StatusInternalServerError
 //	- "not_implemented" (type *goa.ServiceError): http.StatusNotImplemented
-//	- "bad_request" (type *relayer.ErrorBadRequest): http.StatusBadRequest
+//	- "validation_error" (type *relayer.ErrorBadRequest): http.StatusExpectationFailed
 //	- error: internal error
 func DecodeGetOnlineAccountsResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
 	return func(resp *http.Response) (interface{}, error) {
@@ -2244,20 +2244,20 @@ func DecodeGetOnlineAccountsResponse(decoder func(*http.Response) goahttp.Decode
 				return nil, goahttp.ErrValidationError("Relayer", "getOnlineAccounts", err)
 			}
 			return nil, NewGetOnlineAccountsNotImplemented(&body)
-		case http.StatusBadRequest:
+		case http.StatusExpectationFailed:
 			var (
-				body GetOnlineAccountsBadRequestResponseBody
+				body GetOnlineAccountsValidationErrorResponseBody
 				err  error
 			)
 			err = decoder(resp).Decode(&body)
 			if err != nil {
 				return nil, goahttp.ErrDecodingError("Relayer", "getOnlineAccounts", err)
 			}
-			err = ValidateGetOnlineAccountsBadRequestResponseBody(&body)
+			err = ValidateGetOnlineAccountsValidationErrorResponseBody(&body)
 			if err != nil {
 				return nil, goahttp.ErrValidationError("Relayer", "getOnlineAccounts", err)
 			}
-			return nil, NewGetOnlineAccountsBadRequest(&body)
+			return nil, NewGetOnlineAccountsValidationError(&body)
 		default:
 			body, _ := ioutil.ReadAll(resp.Body)
 			return nil, goahttp.ErrInvalidResponse("Relayer", "getOnlineAccounts", resp.StatusCode, string(body))
@@ -2305,7 +2305,7 @@ func EncodeGetEthTransactionsRequest(encoder func(*http.Request) goahttp.Encoder
 //	- "rate_limit" (type *goa.ServiceError): http.StatusTooManyRequests
 //	- "internal" (type *goa.ServiceError): http.StatusInternalServerError
 //	- "not_implemented" (type *goa.ServiceError): http.StatusNotImplemented
-//	- "bad_request" (type *relayer.ErrorBadRequest): http.StatusBadRequest
+//	- "validation_error" (type *relayer.ErrorBadRequest): http.StatusExpectationFailed
 //	- error: internal error
 func DecodeGetEthTransactionsResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
 	return func(resp *http.Response) (interface{}, error) {
@@ -2393,20 +2393,20 @@ func DecodeGetEthTransactionsResponse(decoder func(*http.Response) goahttp.Decod
 				return nil, goahttp.ErrValidationError("Relayer", "getEthTransactions", err)
 			}
 			return nil, NewGetEthTransactionsNotImplemented(&body)
-		case http.StatusBadRequest:
+		case http.StatusExpectationFailed:
 			var (
-				body GetEthTransactionsBadRequestResponseBody
+				body GetEthTransactionsValidationErrorResponseBody
 				err  error
 			)
 			err = decoder(resp).Decode(&body)
 			if err != nil {
 				return nil, goahttp.ErrDecodingError("Relayer", "getEthTransactions", err)
 			}
-			err = ValidateGetEthTransactionsBadRequestResponseBody(&body)
+			err = ValidateGetEthTransactionsValidationErrorResponseBody(&body)
 			if err != nil {
 				return nil, goahttp.ErrValidationError("Relayer", "getEthTransactions", err)
 			}
-			return nil, NewGetEthTransactionsBadRequest(&body)
+			return nil, NewGetEthTransactionsValidationError(&body)
 		default:
 			body, _ := ioutil.ReadAll(resp.Body)
 			return nil, goahttp.ErrInvalidResponse("Relayer", "getEthTransactions", resp.StatusCode, string(body))

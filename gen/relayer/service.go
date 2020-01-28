@@ -13,7 +13,7 @@ import (
 	goa "goa.design/goa/v3/pkg"
 )
 
-// Relayer implements REST API for RelayerDaemon with SRAv2 support.
+// Relayer implements REST API for RelayerDaemon with SRAv3 support.
 type Service interface {
 	// Retrieves a list of available asset pairs and the information required to
 	// trade them.
@@ -722,7 +722,7 @@ func (e *ErrorBadRequest) Error() string {
 
 // ErrorName returns "ErrorBadRequest".
 func (e *ErrorBadRequest) ErrorName() string {
-	return "bad_request"
+	return "validation_error"
 }
 
 // Error returns an error description.
