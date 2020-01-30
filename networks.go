@@ -21,7 +21,7 @@ var (
 		Name:      "N network",
 		Desc:      "Specify network name to use for all transactions withing the session.",
 		EnvVar:    "DEXTERM_NETWORK",
-		Value:     "mainnet",
+		Value:     "devnet",
 		SetByUser: &networksDefaultSet,
 	}
 )

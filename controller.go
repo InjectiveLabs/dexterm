@@ -84,6 +84,9 @@ func NewAppController(configPath string) (*AppController, error) {
 
 	if ctl.takeFirstAccountAsDefault() {
 		saveConfig(ctl.configPath, ctl.cfg)
+	} else if _, ok := ctl.getConfigValue("accounts.default"); !ok {
+		ctl.generateDefaultAccount()
+		saveConfig(ctl.configPath, ctl.cfg)
 	}
 
 	if ctl.selectDefaultNetwork() {
@@ -1041,6 +1044,27 @@ func (ctl *AppController) takeFirstAccountAsDefault() bool {
 	}
 
 	return false
+}
+
+func (ctl *AppController) generateDefaultAccount() {
+	const defaultPassword = "12345678"
+	acc, err := ethCreateAccount(ctl.keystorePath, &AccountCreateArgs{
+		Password:       defaultPassword,
+		PasswordRepeat: defaultPassword,
+	})
+	if err != nil {
+		logrus.WithError(err).Errorln("failed to generate default account")
+		return
+	}
+
+	ctl.setConfigValue("accounts.default", acc.Address.Hex())
+
+	logrus.WithFields(logrus.Fields{
+		"account":    acc.Address.Hex(),
+		"passphrase": defaultPassword,
+	}).Infoln("Created a new default account, encrypting with insecure password.")
+
+	logrus.Infoln("To import, create or switch your own accounts use keystore menu.")
 }
 
 func (ctl *AppController) selectDefaultNetwork() bool {

@@ -131,7 +131,8 @@ func (a *AppState) Completer() prompt.Completer {
 		case a.argContainer != nil:
 			if a.isCurrentFieldPassword() {
 				return []prompt.Suggest{{
-					Text: "Press enter and type password.",
+					Text: "Passphrase",
+					Description: "Sign using a private key, need to provide a passphrase to unlock it.",
 				}}
 			}
 
