@@ -19,7 +19,7 @@ lint: export GO111MODULE=on
 lint: export GOPROXY=direct
 lint:
 	go install github.com/golangci/golangci-lint/cmd/golangci-lint
-	golangci-lint run
+	golangci-lint run --no-config --issues-exit-code=1 --enable-all --disable=gocyclo --disable=nakedret --disable=gochecknoglobals --tests=false --disable=goimports --disable=wsl
 
 build-release: export DOCKER_BUILDKIT=1
 build-release: export VERSION_FLAGS="-X $(VERSION_PKG).AppVersion=$(APP_VERSION) -X $(VERSION_PKG).GitCommit=$(GIT_COMMIT) -X $(VERSION_PKG).BuildDate=$(BUILD_DATE)"
