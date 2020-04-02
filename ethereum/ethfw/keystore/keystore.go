@@ -13,7 +13,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/InjectiveLabs/dexterm/ethfw"
+	"github.com/InjectiveLabs/dexterm/ethereum/ethfw"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 )

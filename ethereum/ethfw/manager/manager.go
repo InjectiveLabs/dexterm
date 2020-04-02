@@ -18,7 +18,7 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
 
-	"github.com/InjectiveLabs/dexterm/ethfw"
+	"github.com/InjectiveLabs/dexterm/ethereum/ethfw"
 )
 
 var (

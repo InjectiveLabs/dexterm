@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/InjectiveLabs/dexterm/ethfw"
+	"github.com/InjectiveLabs/dexterm/ethereum/ethfw"
 )
 
 type GasStation interface {

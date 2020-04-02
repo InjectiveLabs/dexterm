@@ -5,12 +5,13 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/InjectiveLabs/dexterm/ethfw/sol"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
+
+	"github.com/InjectiveLabs/dexterm/ethereum/ethfw/sol"
 )
 
 type TransactFunc func(opts *bind.TransactOpts, contract *common.Address, input []byte) (*types.Transaction, error)

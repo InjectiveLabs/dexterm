@@ -8,7 +8,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 
-	"github.com/InjectiveLabs/dexterm/ethfw"
+	"github.com/InjectiveLabs/dexterm/ethereum/ethfw"
 )
 
 func (m *ethManager) Balance(ctx context.Context, account common.Address) (*ethfw.Wei, error) {
