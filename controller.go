@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	zeroex "github.com/InjectiveLabs/zeroex-go"
 	"github.com/c-bata/go-prompt"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/fatih/color"
@@ -22,9 +23,12 @@ import (
 	"github.com/xlab/closer"
 	"github.com/xlab/termtables"
 
-	"github.com/InjectiveLabs/dexterm/ethfw/keystore"
-	"github.com/InjectiveLabs/dexterm/ethfw/manager"
-	relayer "github.com/InjectiveLabs/injective-core/api/gen/relayer"
+	"github.com/InjectiveLabs/dexterm/clients"
+	"github.com/InjectiveLabs/dexterm/ethereum/ethcore"
+	"github.com/InjectiveLabs/dexterm/ethereum/ethfw/keystore"
+	"github.com/InjectiveLabs/dexterm/ethereum/ethfw/manager"
+	sraAPI "github.com/InjectiveLabs/dexterm/gen/relayer_api"
+	restAPI "github.com/InjectiveLabs/dexterm/gen/rest_api"
 )
 
 func init() {
@@ -34,12 +38,16 @@ func init() {
 }
 
 type AppController struct {
-	cfg           *toml.Tree
-	configPath    string
-	relayerClient *RelayerClient
+	cfg        *toml.Tree
+	configPath string
+
+	debugClient       *clients.DebugClient
+	restClient        *clients.RESTClient
+	sraClient         *clients.SRAClient
+	coordinatorClient *clients.CoordinatorClient
 
 	ethGasPrice *big.Int
-	ethClient   *EthClient
+	ethCore     *ethcore.EthClient
 
 	keystorePath string
 	keystore     keystore.EthKeyStore
@@ -56,14 +64,36 @@ func NewAppController(configPath string) (*AppController, error) {
 		configPath: configPath,
 	}
 
-	clientCfg := &RelayerClientConfig{
+	if debugClient, err := clients.NewDebugClient(&clients.DebugClientConfig{
 		Endpoint: ctl.mustConfigValue("relayer.endpoint"),
+	}); err != nil {
+		logrus.WithError(err).Warningln("no debug API HTTP connection")
+	} else {
+		ctl.debugClient = debugClient
 	}
 
-	if relayerClient, err := NewRelayerClient(clientCfg); err != nil {
-		logrus.WithError(err).Warningln("running in offline mode")
+	if restClient, err := clients.NewRESTClient(&clients.RESTClientConfig{
+		Endpoint: ctl.mustConfigValue("relayer.endpoint"),
+	}); err != nil {
+		logrus.WithError(err).Warningln("no REST HTTP connection, running in offline mode")
 	} else {
-		ctl.relayerClient = relayerClient
+		ctl.restClient = restClient
+
+		if sraClient, err := clients.NewSRAClient(restClient, &clients.SRAClientConfig{
+			Endpoint: ctl.mustConfigValue("relayer.endpoint"),
+		}); err != nil {
+			logrus.WithError(err).Warningln("no SRA HTTP connection")
+		} else {
+			ctl.sraClient = sraClient
+		}
+
+		if coordinatorClient, err := clients.NewCoordinatorClient(&clients.CoordinatorClientConfig{
+			Endpoint: ctl.mustConfigValue("relayer.endpoint"),
+		}); err != nil {
+			logrus.WithError(err).Warningln("no coordinator HTTP connection")
+		} else {
+			ctl.coordinatorClient = coordinatorClient
+		}
 	}
 
 	keystorePath := ctl.mustConfigValue("accounts.keystore")
@@ -114,21 +144,21 @@ func (ctl *AppController) ActionQuit() {
 	closer.Close()
 }
 
-type TradeMakeBuyOrderArgs struct {
+type TradeLimitBuyOrderArgs struct {
 	Market       string
 	Amount       string
 	Price        string
 	SignPassword string
 }
 
-func (ctl *AppController) ActionTradeBuy(args interface{}) {
-	makeBuyOrderArgs := args.(*TradeMakeBuyOrderArgs)
+func (ctl *AppController) ActionTradeLimitBuy(args interface{}) {
+	makeBuyOrderArgs := args.(*TradeLimitBuyOrderArgs)
 
 	ctx := context.Background()
 	ctx, cancelFn := context.WithTimeout(ctx, 30*time.Second)
 	defer cancelFn()
 
-	tradePairs, err := ctl.relayerClient.TradePairs(ctx)
+	tradePairs, err := ctl.restClient.TradePairs(ctx)
 	if err != nil {
 		logrus.WithError(err).Errorln("unable to fetch trade pairs")
 		return
@@ -150,7 +180,7 @@ func (ctl *AppController) ActionTradeBuy(args interface{}) {
 	if len(makerAssetData) == 0 || len(takerAssetData) == 0 {
 		logrus.WithFields(logrus.Fields{
 			"market": makeBuyOrderArgs.Market,
-		}).Errorln("specified market not found")
+		}).Errorln("specified trade pair not found")
 
 		return
 	}
@@ -178,28 +208,26 @@ func (ctl *AppController) ActionTradeBuy(args interface{}) {
 
 	defaultAccount := common.HexToAddress(ctl.mustConfigValue("accounts.default"))
 
-	callArgs := &CallArgs{
+	callArgs := &ethcore.CallArgs{
 		Context:  ctx,
 		From:     defaultAccount,
 		FromPass: makeBuyOrderArgs.SignPassword,
 		GasPrice: ctl.ethGasPrice,
 	}
 
-	exchangeAddress := ctl.ethClient.contractAddresses[EthContractExchange]
-	signedOrder, err := ctl.ethClient.CreateAndSignOrder(
+	signedOrder, err := ctl.ethCore.CreateAndSignOrder(
 		callArgs,
 		makerAssetData,
 		takerAssetData,
 		makerAmount,
 		takerAmount,
-		exchangeAddress,
 	)
 	if err != nil {
 		logrus.WithError(err).Errorln("unable to sign order")
 		return
 	}
 
-	orderHash, err := ctl.relayerClient.PostOrder(ctx, signedOrder)
+	orderHash, err := ctl.sraClient.PostOrder(ctx, signedOrder)
 	if err != nil {
 		logrus.WithError(err).Errorln("unable to post order")
 		return
@@ -208,21 +236,21 @@ func (ctl *AppController) ActionTradeBuy(args interface{}) {
 	fmt.Println(orderHash)
 }
 
-type TradeMakeSellOrderArgs struct {
+type TradeLimitSellOrderArgs struct {
 	Market       string
 	Amount       string
 	Price        string
 	SignPassword string
 }
 
-func (ctl *AppController) ActionTradeSell(args interface{}) {
-	makeSellOrderArgs := args.(*TradeMakeSellOrderArgs)
+func (ctl *AppController) ActionTradeLimitSell(args interface{}) {
+	makeSellOrderArgs := args.(*TradeLimitSellOrderArgs)
 
 	ctx := context.Background()
 	ctx, cancelFn := context.WithTimeout(ctx, 30*time.Second)
 	defer cancelFn()
 
-	tradePairs, err := ctl.relayerClient.TradePairs(ctx)
+	tradePairs, err := ctl.restClient.TradePairs(ctx)
 	if err != nil {
 		logrus.WithError(err).Errorln("unable to fetch trade pairs")
 		return
@@ -243,7 +271,7 @@ func (ctl *AppController) ActionTradeSell(args interface{}) {
 	if len(makerAssetData) == 0 || len(takerAssetData) == 0 {
 		logrus.WithFields(logrus.Fields{
 			"market": makeSellOrderArgs.Market,
-		}).Errorln("specified market not found")
+		}).Errorln("specified trade pair not found")
 
 		return
 	}
@@ -271,28 +299,26 @@ func (ctl *AppController) ActionTradeSell(args interface{}) {
 
 	defaultAccount := common.HexToAddress(ctl.mustConfigValue("accounts.default"))
 
-	callArgs := &CallArgs{
+	callArgs := &ethcore.CallArgs{
 		Context:  ctx,
 		From:     defaultAccount,
 		FromPass: makeSellOrderArgs.SignPassword,
 		GasPrice: ctl.ethGasPrice,
 	}
 
-	exchangeAddress := ctl.ethClient.contractAddresses[EthContractExchange]
-	signedOrder, err := ctl.ethClient.CreateAndSignOrder(
+	signedOrder, err := ctl.ethCore.CreateAndSignOrder(
 		callArgs,
 		makerAssetData,
 		takerAssetData,
 		makerAmount,
 		takerAmount,
-		exchangeAddress,
 	)
 	if err != nil {
 		logrus.WithError(err).Errorln("unable to sign order")
 		return
 	}
 
-	orderHash, err := ctl.relayerClient.PostOrder(ctx, signedOrder)
+	orderHash, err := ctl.sraClient.PostOrder(ctx, signedOrder)
 	if err != nil {
 		logrus.WithError(err).Errorln("unable to post order")
 		return
@@ -321,13 +347,13 @@ func (ctl *AppController) ActionTradeFillOrder(args interface{}) {
 	ctx, cancelFn := context.WithTimeout(ctx, 30*time.Second)
 	defer cancelFn()
 
-	tradePairs, err := ctl.relayerClient.TradePairs(ctx)
+	tradePairs, err := ctl.restClient.TradePairs(ctx)
 	if err != nil {
 		logrus.WithError(err).Errorln("unable to fetch trade pairs")
 		return
 	}
 
-	var marketPair *relayer.TradePair
+	var tradePair *restAPI.TradePair
 	for _, pair := range tradePairs {
 		if pair.Name != fillOrderArgs.Market {
 			continue
@@ -335,18 +361,18 @@ func (ctl *AppController) ActionTradeFillOrder(args interface{}) {
 			continue
 		}
 
-		marketPair = pair
+		tradePair = pair
 	}
 
-	if marketPair == nil {
+	if tradePair == nil {
 		logrus.WithFields(logrus.Fields{
 			"market": fillOrderArgs.Market,
-		}).Errorln("specified market not found or is not enabled")
+		}).Errorln("specified tarde pair not found or is not enabled")
 
 		return
 	}
 
-	makeOrder, err := ctl.relayerClient.Order(ctx, fillOrderArgs.OrderHash)
+	makeOrder, err := ctl.sraClient.Order(ctx, fillOrderArgs.OrderHash)
 	if err != nil {
 		logrus.WithFields(logrus.Fields{
 			"order": fillOrderArgs.OrderHash,
@@ -355,7 +381,7 @@ func (ctl *AppController) ActionTradeFillOrder(args interface{}) {
 	}
 
 	var isBid bool
-	if makeOrder.TakerAssetData == marketPair.MakerAssetData {
+	if makeOrder.TakerAssetData == tradePair.MakerAssetData {
 		isBid = true
 	}
 
@@ -393,53 +419,64 @@ func (ctl *AppController) ActionTradeFillOrder(args interface{}) {
 		makerAmount = dec2big(fillAmountDec.Div(price))
 		takerAmount = fillAmount
 
-		makerAssetData = common.FromHex(marketPair.TakerAssetData)
-		takerAssetData = common.FromHex(marketPair.MakerAssetData)
+		makerAssetData = common.FromHex(tradePair.TakerAssetData)
+		takerAssetData = common.FromHex(tradePair.MakerAssetData)
 	} else {
 		// maker must have fillAmount of base currency
 		// taker must have fillAmount * price of quote currency
 		makerAmount = fillAmount
 		takerAmount = dec2big(fillAmountDec.Mul(price))
 
-		makerAssetData = common.FromHex(marketPair.MakerAssetData)
-		takerAssetData = common.FromHex(marketPair.TakerAssetData)
+		makerAssetData = common.FromHex(tradePair.MakerAssetData)
+		takerAssetData = common.FromHex(tradePair.TakerAssetData)
 	}
+
+	// not used for now
+	_ = makerAmount
+	_ = makerAssetData
+	_ = takerAssetData
 
 	defaultAccount := common.HexToAddress(ctl.mustConfigValue("accounts.default"))
 
-	callArgs := &CallArgs{
+	callArgs := &ethcore.CallArgs{
 		Context:  ctx,
 		From:     defaultAccount,
 		FromPass: fillOrderArgs.SignPassword,
 		GasPrice: ctl.ethGasPrice,
 	}
 
-	exchangeAddress := ctl.ethClient.contractAddresses[EthContractExchange]
-	signedTakeOrder, err := ctl.ethClient.CreateAndSignOrder(
+	exchangeAddress := ctl.ethCore.ContractAddress(ethcore.EthContractExchange)
+
+	zeroExOrder, err := ro2zo(makeOrder)
+	if err != nil {
+		logrus.WithError(err).Errorln("failed to convert SRAv3 order into zeroex.SignedOrder")
+		return
+	}
+	signedTx, err := ctl.ethCore.CreateAndSignTransaction_FillOrders(
 		callArgs,
-		makerAssetData,
-		takerAssetData,
-		makerAmount,
-		takerAmount,
 		exchangeAddress,
+		[]*zeroex.SignedOrder{zeroExOrder},
+		[]*big.Int{takerAmount},
 	)
 	if err != nil {
-		logrus.WithError(err).Errorln("unable to sign order")
+		logrus.WithError(err).Errorln("unable to create and sign transaction")
 		return
 	}
 
-	takeOrderHash, err := ctl.relayerClient.TakeOrder(ctx,
-		[]*relayer.Order{
-			makeOrder,
-		},
-		signedTakeOrder,
-	)
+	approvals, _, err := ctl.coordinatorClient.GetCoordinatorApproval(ctx, signedTx, defaultAccount)
 	if err != nil {
-		logrus.WithError(err).Errorln("unable to post take order")
+		logrus.WithError(err).Errorln("failed to get approval from Coordinator API")
 		return
 	}
 
-	fmt.Println(takeOrderHash)
+	txHash, err := ctl.ethCore.ExecuteTransaction(callArgs, signedTx, approvals[0])
+	if err != nil {
+		logrus.WithError(err).Errorln("unable to execute Exchange transaction")
+		return
+	}
+
+	fmt.Println(ctl.formatTxLink(txHash))
+	ctl.checkTx(txHash)
 }
 
 type TradeOrderbookArgs struct {
@@ -455,10 +492,10 @@ func (ctl *AppController) ActionTradeOrderbook(args interface{}) {
 
 	defaultAccount := common.HexToAddress(ctl.mustConfigValue("accounts.default"))
 
-	bids, asks, err := ctl.relayerClient.Orderbook(ctx, orderbookArgs.Market)
+	bids, asks, err := ctl.sraClient.Orderbook(ctx, orderbookArgs.Market)
 	if err != nil {
 		logrus.WithField("tradePair", orderbookArgs.Market).
-			WithError(err).Errorln("unable to get orderbook for this market")
+			WithError(err).Errorln("unable to get orderbook for trade pair")
 		return
 	}
 
@@ -475,10 +512,10 @@ func (ctl *AppController) ActionTradeOrderbook(args interface{}) {
 		"Notes",
 	)
 
-	if len(asks.Records) == 0 {
+	if len(asks) == 0 {
 		table.AddRow(color.RedString("No asks."), "", "")
 	} else {
-		for _, ask := range asks.Records {
+		for _, ask := range asks {
 			var notes string
 			if isMakerOf(ask.Order, defaultAccount) {
 				notes = "⭑ owner"
@@ -495,10 +532,10 @@ func (ctl *AppController) ActionTradeOrderbook(args interface{}) {
 
 	table.AddSeparator()
 
-	if len(bids.Records) == 0 {
+	if len(bids) == 0 {
 		table.AddRow(color.GreenString("No bids."), "", "")
 	} else {
-		for _, bid := range bids.Records {
+		for _, bid := range bids {
 			var notes string
 			if isMakerOf(bid.Order, defaultAccount) {
 				notes = "⭑ owner"
@@ -516,7 +553,7 @@ func (ctl *AppController) ActionTradeOrderbook(args interface{}) {
 	fmt.Println(table.Render())
 }
 
-func isMakerOf(order *relayer.Order, address common.Address) bool {
+func isMakerOf(order *sraAPI.Order, address common.Address) bool {
 	return bytes.Compare(
 		common.HexToAddress(order.MakerAddress).Bytes(),
 		address.Bytes(),
@@ -524,12 +561,12 @@ func isMakerOf(order *relayer.Order, address common.Address) bool {
 }
 
 func (ctl *AppController) getTokenNamesAndAssets(ctx context.Context) (tokenNames []string, assets []common.Address, err error) {
-	if ctl.relayerClient == nil {
+	if ctl.sraClient == nil {
 		err := errors.New("client in offline mode")
 		return nil, nil, err
 	}
 
-	pairs, err := ctl.relayerClient.TradePairs(ctx)
+	pairs, err := ctl.restClient.TradePairs(ctx)
 	if err != nil {
 		err = errors.Wrap(err, "failed to list trade pairs")
 		return tokenNames, assets, err
@@ -547,9 +584,9 @@ func (ctl *AppController) getTokenNamesAndAssets(ctx context.Context) (tokenName
 		tokenMap[parts[1]] = common.HexToAddress("0x" + pair.TakerAssetData[len(pair.TakerAssetData)-40:])
 	}
 
-	if ctl.ethClient != nil {
+	if ctl.ethCore != nil {
 		// always override WETH with client-side configured address
-		tokenMap["WETH"] = ctl.ethClient.contractAddresses[EthContractWETH9]
+		tokenMap["WETH"] = ctl.ethCore.ContractAddress(ethcore.EthContractWETH9)
 	}
 
 	tokenNames = make([]string, 0, len(tokenMap))
@@ -574,7 +611,7 @@ func (ctl *AppController) ActionTradeTokens() {
 	defer cancelFn()
 
 	tokenNames, assets, err := ctl.getTokenNamesAndAssets(ctx)
-	if err == ErrClientUnavailable {
+	if err == clients.ErrClientUnavailable {
 		logrus.Errorln("Ethereum client is not initialized")
 		return
 	} else if err != nil {
@@ -584,7 +621,7 @@ func (ctl *AppController) ActionTradeTokens() {
 
 	defaultAccount := common.HexToAddress(ctl.mustConfigValue("accounts.default"))
 
-	ethBalance, err := ctl.ethClient.EthBalance(ctx, defaultAccount)
+	ethBalance, err := ctl.ethCore.EthBalance(ctx, defaultAccount)
 	if err != nil {
 		logrus.WithError(err).WithField("account", defaultAccount.Hex()).Warningln("Unable to get Eth balance")
 	}
@@ -599,8 +636,8 @@ func (ctl *AppController) ActionTradeTokens() {
 	networkName := ctl.mustConfigValue("networks.default")
 	proxyAddressHex := ctl.mustConfigValue(fmt.Sprintf("networks.%s.erc20proxy_address", networkName))
 
-	allowances := ctl.ethClient.AllowancesMap(ctx, defaultAccount, common.HexToAddress(proxyAddressHex), assets)
-	balances := ctl.ethClient.BalancesMap(ctx, defaultAccount, assets)
+	allowances := ctl.ethCore.AllowancesMap(ctx, defaultAccount, common.HexToAddress(proxyAddressHex), assets)
+	balances := ctl.ethCore.BalancesMap(ctx, defaultAccount, assets)
 
 	if len(balances) == 0 && len(allowances) == 0 {
 		fmt.Println("No token info available.")
@@ -627,7 +664,7 @@ func (ctl *AppController) ActionTradeTokens() {
 		}
 
 		if allowances[addr] != nil {
-			isUnlocked := (allowances[addr].Cmp(UnlimitedAllowance) == 0)
+			isUnlocked := (allowances[addr].Cmp(ethcore.UnlimitedAllowance) == 0)
 			if isUnlocked {
 				unlockedStr = "x"
 			}
@@ -647,7 +684,7 @@ func (ctl *AppController) ActionTradeTokens() {
 func (ctl *AppController) ActionTradePairs() {
 	ctx := context.Background()
 
-	pairs, err := ctl.relayerClient.TradePairs(ctx)
+	pairs, err := ctl.restClient.TradePairs(ctx)
 	if err != nil {
 		logrus.WithError(err).Errorln("failed to list trade pairs")
 		return
@@ -669,7 +706,7 @@ func (ctl *AppController) ActionUtilLock(args interface{}) {
 	defer cancelFn()
 
 	tokenNames, assets, err := ctl.getTokenNamesAndAssets(ctx)
-	if err == ErrClientUnavailable {
+	if err == clients.ErrClientUnavailable {
 		logrus.Errorln("Ethereum client is not initialized")
 		return
 	} else if err != nil {
@@ -680,7 +717,7 @@ func (ctl *AppController) ActionUtilLock(args interface{}) {
 	tokenLockArgs := args.(*UtilTokenLockArgs)
 	defaultAccount := common.HexToAddress(ctl.mustConfigValue("accounts.default"))
 
-	callArgs := &CallArgs{
+	callArgs := &ethcore.CallArgs{
 		Context:  ctx,
 		From:     defaultAccount,
 		FromPass: tokenLockArgs.Password,
@@ -696,7 +733,7 @@ func (ctl *AppController) ActionUtilLock(args interface{}) {
 		}
 	}
 
-	txHash, err := ctl.ethClient.TokenLock(callArgs, asset)
+	txHash, err := ctl.ethCore.TokenLock(callArgs, asset)
 	if err != nil {
 		logrus.WithError(err).Errorln("unable to lock token")
 		return
@@ -717,7 +754,7 @@ func (ctl *AppController) ActionUtilUnlock(args interface{}) {
 	defer cancelFn()
 
 	tokenNames, assets, err := ctl.getTokenNamesAndAssets(ctx)
-	if err == ErrClientUnavailable {
+	if err == clients.ErrClientUnavailable {
 		logrus.Errorln("Ethereum client is not initialized")
 		return
 	} else if err != nil {
@@ -728,7 +765,7 @@ func (ctl *AppController) ActionUtilUnlock(args interface{}) {
 	tokenUnlockArgs := args.(*UtilTokenUnlockArgs)
 	defaultAccount := common.HexToAddress(ctl.mustConfigValue("accounts.default"))
 
-	callArgs := &CallArgs{
+	callArgs := &ethcore.CallArgs{
 		Context:  ctx,
 		From:     defaultAccount,
 		FromPass: tokenUnlockArgs.Password,
@@ -744,7 +781,7 @@ func (ctl *AppController) ActionUtilUnlock(args interface{}) {
 		}
 	}
 
-	txHash, err := ctl.ethClient.TokenUnlock(callArgs, asset)
+	txHash, err := ctl.ethCore.TokenUnlock(callArgs, asset)
 	if err != nil {
 		logrus.WithError(err).Errorln("unable to unlock token")
 		return
@@ -767,7 +804,7 @@ func (ctl *AppController) ActionUtilWrap(args interface{}) {
 	ethWrapArgs := args.(*UtilWrapArgs)
 	defaultAccount := common.HexToAddress(ctl.mustConfigValue("accounts.default"))
 
-	callArgs := &CallArgs{
+	callArgs := &ethcore.CallArgs{
 		Context:  ctx,
 		From:     defaultAccount,
 		FromPass: ethWrapArgs.Password,
@@ -787,7 +824,7 @@ func (ctl *AppController) ActionUtilWrap(args interface{}) {
 		amount = dec2big(amountDec)
 	}
 
-	txHash, err := ctl.ethClient.EthWrap(callArgs, amount)
+	txHash, err := ctl.ethCore.EthWrap(callArgs, amount)
 	if err != nil {
 		logrus.WithError(err).Errorln("unable to wrap ETH")
 		return
@@ -810,7 +847,7 @@ func (ctl *AppController) ActionUtilUnwrap(args interface{}) {
 	ethUnwrapArgs := args.(*UtilUnwrapArgs)
 	defaultAccount := common.HexToAddress(ctl.mustConfigValue("accounts.default"))
 
-	callArgs := &CallArgs{
+	callArgs := &ethcore.CallArgs{
 		Context:  ctx,
 		From:     defaultAccount,
 		FromPass: ethUnwrapArgs.Password,
@@ -830,7 +867,7 @@ func (ctl *AppController) ActionUtilUnwrap(args interface{}) {
 		amount = dec2big(amountDec)
 	}
 
-	txHash, err := ctl.ethClient.EthUnwrap(callArgs, amount)
+	txHash, err := ctl.ethCore.EthUnwrap(callArgs, amount)
 	if err != nil {
 		logrus.WithError(err).Errorln("unable to wrap WETH")
 		return
@@ -841,7 +878,7 @@ func (ctl *AppController) ActionUtilUnwrap(args interface{}) {
 }
 
 func (ctl *AppController) ActionAccountsUse(args interface{}) {
-	addr, err := ethParseAccount(args.(*AccountUseArgs))
+	addr, err := ethcore.ParseAccount(args.(*ethcore.AccountUseArgs))
 	if err != nil {
 		logrus.WithError(err).Errorln("failed to select default account")
 		return
@@ -868,15 +905,15 @@ func (ctl *AppController) ActionAccountsUse(args interface{}) {
 		logrus.WithError(err).Errorln("failed to save config file")
 	}
 
-	if ctl.ethClient != nil {
-		ctl.ethClient.SetDefaultFromAddress(addr)
+	if ctl.ethCore != nil {
+		ctl.ethCore.SetDefaultFromAddress(addr)
 	} else if err := ctl.initEthClient(); err != nil {
 		logrus.WithError(err).Warningln("failed to init Ethereum client")
 	}
 }
 
 func (ctl *AppController) ActionAccountsCreate(args interface{}) {
-	acc, err := ethCreateAccount(ctl.keystorePath, args.(*AccountCreateArgs))
+	acc, err := ethcore.CreateAccount(ctl.keystorePath, args.(*ethcore.AccountCreateArgs))
 	if err != nil {
 		logrus.WithError(err).Errorln("failed to create new account")
 		return
@@ -890,7 +927,7 @@ func (ctl *AppController) ActionAccountsCreate(args interface{}) {
 }
 
 func (ctl *AppController) ActionAccountsImport(args interface{}) {
-	addr, err := ethImportAccount(ctl.keystorePath, args.(*AccountImportArgs))
+	addr, err := ethcore.ImportAccount(ctl.keystorePath, args.(*ethcore.AccountImportArgs))
 	if err != nil {
 		logrus.WithError(err).Errorln("failed to import account")
 		return
@@ -904,7 +941,7 @@ func (ctl *AppController) ActionAccountsImport(args interface{}) {
 }
 
 func (ctl *AppController) ActionAccountsImportPrivKey(args interface{}) {
-	addr, err := ethImportPrivKey(ctl.keystorePath, args.(*AccountImportPrivKeyArgs))
+	addr, err := ethcore.ImportPrivKey(ctl.keystorePath, args.(*ethcore.AccountImportPrivKeyArgs))
 	if err != nil {
 		logrus.WithError(err).Errorln("failed to import private key")
 		return
@@ -965,7 +1002,7 @@ func (ctl *AppController) SuggestMarkets() []prompt.Suggest {
 	ctx, cancelFn := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancelFn()
 
-	pairs, err := ctl.relayerClient.TradePairs(ctx)
+	pairs, err := ctl.restClient.TradePairs(ctx)
 	if err != nil {
 		logrus.WithError(err).Warningln("failed to fetch trade pairs")
 		return nil
@@ -989,14 +1026,14 @@ func (ctl *AppController) SuggestOrderToFill(pairName string) []prompt.Suggest {
 	ctx, cancelFn := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancelFn()
 
-	bids, asks, err := ctl.relayerClient.Orderbook(ctx, pairName)
+	bids, asks, err := ctl.sraClient.Orderbook(ctx, pairName)
 	if err != nil {
 		logrus.WithError(err).Warningln("failed to fetch orderbook")
 		return nil
 	}
 
-	suggestions := make([]prompt.Suggest, 0, len(bids.Records)+len(asks.Records))
-	for _, ask := range asks.Records {
+	suggestions := make([]prompt.Suggest, 0, len(bids)+len(asks))
+	for _, ask := range asks {
 		// TODO: ignore own orders
 
 		zxOrder, _ := ro2zo(ask.Order)
@@ -1010,7 +1047,7 @@ func (ctl *AppController) SuggestOrderToFill(pairName string) []prompt.Suggest {
 		})
 	}
 
-	for _, bid := range bids.Records {
+	for _, bid := range bids {
 		// TODO: ignore own orders
 
 		zxOrder, _ := ro2zo(bid.Order)
@@ -1025,6 +1062,16 @@ func (ctl *AppController) SuggestOrderToFill(pairName string) []prompt.Suggest {
 	}
 
 	return suggestions
+}
+
+func getBidCurrency(market string) string {
+	parts := strings.Split(market, "/")
+	return parts[0]
+}
+
+func getAskCurrency(market string) string {
+	parts := strings.Split(market, "/")
+	return parts[1]
 }
 
 func (ctl *AppController) takeFirstAccountAsDefault() bool {
@@ -1048,7 +1095,7 @@ func (ctl *AppController) takeFirstAccountAsDefault() bool {
 
 func (ctl *AppController) generateDefaultAccount() {
 	const defaultPassword = "12345678"
-	acc, err := ethCreateAccount(ctl.keystorePath, &AccountCreateArgs{
+	acc, err := ethcore.CreateAccount(ctl.keystorePath, &ethcore.AccountCreateArgs{
 		Password:       defaultPassword,
 		PasswordRepeat: defaultPassword,
 	})
@@ -1115,7 +1162,7 @@ func (ctl *AppController) checkTx(txHash common.Hash) {
 }
 
 func (ctl *AppController) awaitTx(ctx context.Context, txHash common.Hash) error {
-	tx, err := ctl.ethClient.ethManager.TransactionByHash(ctx, txHash.Hex())
+	tx, err := ctl.ethCore.Ethereum().TransactionByHash(ctx, txHash.Hex())
 	if err != nil {
 		return err
 	}
@@ -1125,9 +1172,9 @@ func (ctl *AppController) awaitTx(ctx context.Context, txHash common.Hash) error
 	for {
 		select {
 		case <-t.C:
-			tx, err = ctl.ethClient.ethManager.TransactionByHash(ctx, txHash.Hex())
+			tx, err = ctl.ethCore.Ethereum().TransactionByHash(ctx, txHash.Hex())
 			if err == nil && tx.BlockNumber != nil {
-				receipt, err := ctl.ethClient.ethManager.TransactionReceiptByHash(ctx, txHash.Hex())
+				receipt, err := ctl.ethCore.Ethereum().TransactionReceiptByHash(ctx, txHash.Hex())
 				if err != nil {
 					err = errors.Wrap(err, "failed to get tx receipt")
 					return err
@@ -1174,13 +1221,13 @@ func (ctl *AppController) initEthClient() error {
 	ethEndpoint := ctl.mustConfigValue(fmt.Sprintf("networks.%s.endpoint", networkName))
 	ethGasPrice := ctl.mustConfigValue(fmt.Sprintf("networks.%s.gas_price", networkName))
 
-	exchangeAddressHex := ctl.mustConfigValue(fmt.Sprintf("networks.%s.exchange_address", networkName))
 	weth9AddressHex := ctl.mustConfigValue(fmt.Sprintf("networks.%s.weth9_address", networkName))
 	erc20ProxyAddressHex := ctl.mustConfigValue(fmt.Sprintf("networks.%s.erc20proxy_address", networkName))
-	contractAddresses := map[EthContract]common.Address{
-		EthContractWETH9:      common.HexToAddress(weth9AddressHex),
-		EthContractERC20Proxy: common.HexToAddress(erc20ProxyAddressHex),
-		EthContractExchange:   common.HexToAddress(exchangeAddressHex),
+	exchangeAddressHex := ctl.mustConfigValue(fmt.Sprintf("networks.%s.exchange_address", networkName))
+	contractAddresses := map[ethcore.EthContract]common.Address{
+		ethcore.EthContractWETH9:      common.HexToAddress(weth9AddressHex),
+		ethcore.EthContractERC20Proxy: common.HexToAddress(erc20ProxyAddressHex),
+		ethcore.EthContractExchange:   common.HexToAddress(exchangeAddressHex),
 	}
 
 	ethManager := manager.NewManager([]string{
@@ -1196,7 +1243,7 @@ func (ctl *AppController) initEthClient() error {
 		ctl.ethGasPrice = nil
 	}
 
-	ethClient, err := NewEthClient(
+	ethCore, err := ethcore.New(
 		ctl.keystore,
 		ethManager,
 		defaultFromAddress,
@@ -1211,7 +1258,7 @@ func (ctl *AppController) initEthClient() error {
 		"chain_id": ethManager.ChainID(),
 	}).Debugf("Connected to %s", networkName)
 
-	ctl.ethClient = ethClient
+	ctl.ethCore = ethCore
 
 	return nil
 }
@@ -1255,6 +1302,21 @@ func (ctl *AppController) getConfigValue(path string, fallback ...interface{}) (
 	}
 
 	return v.(string), true
+}
+
+func calcOrderPrice(order *sraAPI.Order, bid bool) (price, vol decimal.Decimal) {
+	makerAmount := decimal.RequireFromString(order.MakerAssetAmount)
+	takerAmount := decimal.RequireFromString(order.TakerAssetAmount)
+
+	if bid { // i.e. buy
+		price = makerAmount.DivRound(takerAmount, 9)
+		vol = decimal.RequireFromString(order.TakerAssetAmount)
+		return
+	}
+
+	price = takerAmount.DivRound(makerAmount, 9)
+	vol = decimal.RequireFromString(order.MakerAssetAmount)
+	return
 }
 
 func makeSpin(ctx context.Context, label string) <-chan struct{} {

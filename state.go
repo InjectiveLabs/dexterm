@@ -12,6 +12,8 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/xlab/structwalk"
 	"golang.org/x/crypto/ssh/terminal"
+
+	"github.com/InjectiveLabs/dexterm/ethereum/ethcore"
 )
 
 func NewAppState(controller *AppController) *AppState {
@@ -42,12 +44,14 @@ const (
 	MenuUtil     MenuItem = "util"
 
 	// Trade menu items
-	MenuTradeBuy       MenuItem = "buy"
-	MenuTradeSell      MenuItem = "sell"
-	MenuTradeFillOrder MenuItem = "fill"
-	MenuTradeOrderbook MenuItem = "orderbook"
-	MenuTradeTokens    MenuItem = "tokens"
-	MenuTradePairs     MenuItem = "pairs"
+	MenuTradeLimitBuy   MenuItem = "limitbuy"
+	MenuTradeLimitSell  MenuItem = "limitsell"
+	MenuTradeFillOrder  MenuItem = "fill"
+	MenuTradeMarketBuy  MenuItem = "marketbuy"
+	MenuTradeMarketSell MenuItem = "marketsell"
+	MenuTradeOrderbook  MenuItem = "orderbook"
+	MenuTradeTokens     MenuItem = "tokens"
+	MenuTradePairs      MenuItem = "pairs"
 
 	// Util menu items
 	MenuUtilUnlock MenuItem = "unlock"
@@ -76,10 +80,13 @@ var mainSuggestions = []prompt.Suggest{
 }
 
 var tradingSuggestions = []prompt.Suggest{
-	{Text: "b/buy", Description: "Create a market Buy order. (WIP)"},
-	{Text: "s/sell", Description: "Create a market Sell order. (WIP)"},
-	{Text: "m/make", Description: "Create a make order."},
-	{Text: "f/fill", Description: "Fill a make order by placing partial take order."},
+	{Text: "b/limitbuy", Description: "Create a Limit Buy order."},
+	{Text: "s/limitsell", Description: "Create a Limit Sell order."},
+	{Text: "f/fill", Description: "Fill an order (Take Order)."},
+
+	// {Text: "mb/marketbuy", Description: "Create a Market Buy order."},
+	// {Text: "ms/marketsell", Description: "Create a Market Sell order."},
+
 	{Text: "o/orderbook", Description: "View orderbook of a market."},
 	{Text: "t/tokens", Description: "View your account token balances."},
 	{Text: "p/pairs", Description: "View available pairs for trade."},
@@ -131,7 +138,7 @@ func (a *AppState) Completer() prompt.Completer {
 		case a.argContainer != nil:
 			if a.isCurrentFieldPassword() {
 				return []prompt.Suggest{{
-					Text: "Passphrase",
+					Text:        "Passphrase",
 					Description: "Sign using a private key, need to provide a passphrase to unlock it.",
 				}}
 			}
@@ -221,9 +228,9 @@ func (a *AppState) executeInRoot(cmd string) {
 		switch a.root {
 		case MenuTrade:
 			switch {
-			case oneOf(MenuItem(cmd), MenuTradeBuy, "b", "b/buy"):
-				a.argContainer = NewArgContainer(&TradeMakeBuyOrderArgs{})
-				a.cmd = MenuTradeBuy
+			case oneOf(MenuItem(cmd), MenuTradeLimitBuy, "b", "b/limitbuy"):
+				a.argContainer = NewArgContainer(&TradeLimitBuyOrderArgs{})
+				a.cmd = MenuTradeLimitBuy
 				a.suggestions = nil
 
 				a.argContainer.AddSuggestions(0, a.controller.SuggestMarkets())
@@ -237,9 +244,9 @@ func (a *AppState) executeInRoot(cmd string) {
 				}})
 
 				return
-			case oneOf(MenuItem(cmd), MenuTradeSell, "s", "s/sell"):
-				a.argContainer = NewArgContainer(&TradeMakeSellOrderArgs{})
-				a.cmd = MenuTradeSell
+			case oneOf(MenuItem(cmd), MenuTradeLimitSell, "s", "s/limitsell"):
+				a.argContainer = NewArgContainer(&TradeLimitSellOrderArgs{})
+				a.cmd = MenuTradeLimitSell
 				a.suggestions = nil
 
 				a.argContainer.AddSuggestions(0, a.controller.SuggestMarkets())
@@ -289,7 +296,7 @@ func (a *AppState) executeInRoot(cmd string) {
 		case MenuAccounts:
 			switch {
 			case oneOf(MenuItem(cmd), MenuAccountsUse, "u", "u/use"):
-				a.argContainer = NewArgContainer(&AccountUseArgs{})
+				a.argContainer = NewArgContainer(&ethcore.AccountUseArgs{})
 				a.cmd = MenuAccountsUse
 				a.suggestions = nil
 
@@ -297,19 +304,19 @@ func (a *AppState) executeInRoot(cmd string) {
 
 				return
 			case oneOf(MenuItem(cmd), MenuAccountsCreate, "c", "c/create"):
-				a.argContainer = NewArgContainer(&AccountCreateArgs{})
+				a.argContainer = NewArgContainer(&ethcore.AccountCreateArgs{})
 				a.cmd = MenuAccountsCreate
 				a.suggestions = nil
 
 				return
 			case oneOf(MenuItem(cmd), MenuAccountsImport, "i", "i/import"):
-				a.argContainer = NewArgContainer(&AccountImportArgs{})
+				a.argContainer = NewArgContainer(&ethcore.AccountImportArgs{})
 				a.cmd = MenuAccountsImport
 				a.suggestions = nil
 
 				return
 			case oneOf(MenuItem(cmd), MenuAccountsImportPrivKey, "p", "p/privkey"):
-				a.argContainer = NewArgContainer(&AccountImportPrivKeyArgs{})
+				a.argContainer = NewArgContainer(&ethcore.AccountImportPrivKeyArgs{})
 				a.cmd = MenuAccountsImportPrivKey
 				a.suggestions = nil
 
@@ -377,10 +384,10 @@ func (a *AppState) executeInRoot(cmd string) {
 
 func (a *AppState) executeCmd(args interface{}) {
 	switch a.cmd {
-	case MenuTradeBuy:
-		a.controller.ActionTradeBuy(args)
-	case MenuTradeSell:
-		a.controller.ActionTradeSell(args)
+	case MenuTradeLimitBuy:
+		a.controller.ActionTradeLimitBuy(args)
+	case MenuTradeLimitSell:
+		a.controller.ActionTradeLimitSell(args)
 	case MenuTradeFillOrder:
 		a.controller.ActionTradeFillOrder(args)
 	case MenuTradeOrderbook:
