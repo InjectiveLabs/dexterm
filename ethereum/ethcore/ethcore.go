@@ -1,4 +1,7 @@
-package main
+package ethcore
+
+// EthCore implements high level logic for operating with Ethereum and zeroex.
+// This package is used in Dexterm app controller.
 
 import (
 	"bytes"
@@ -12,24 +15,21 @@ import (
 	"sync"
 	"time"
 
-	relayer "github.com/InjectiveLabs/injective-core/api/gen/relayer"
 	zeroex "github.com/InjectiveLabs/zeroex-go"
-	signer "github.com/InjectiveLabs/zeroex-go/signer"
+	"github.com/InjectiveLabs/zeroex-go/wrappers"
 	"github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	ethKeystore "github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/mitchellh/go-homedir"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 
-	"github.com/InjectiveLabs/dexterm/ethfw"
-	"github.com/InjectiveLabs/dexterm/ethfw/gasmeter"
-	"github.com/InjectiveLabs/dexterm/ethfw/keystore"
-	"github.com/InjectiveLabs/dexterm/ethfw/manager"
-	"github.com/InjectiveLabs/dexterm/wrappers"
+	"github.com/InjectiveLabs/dexterm/ethereum/ethfw"
+	"github.com/InjectiveLabs/dexterm/ethereum/ethfw/gasmeter"
+	"github.com/InjectiveLabs/dexterm/ethereum/ethfw/keystore"
+	"github.com/InjectiveLabs/dexterm/ethereum/ethfw/manager"
 )
 
 type EthClient struct {
@@ -45,6 +45,7 @@ type EthClient struct {
 	ercWrappers    map[common.Address]*wrappers.ERC20
 	ercWrappersMux *sync.RWMutex
 	weth9          *wrappers.WETH9
+	exchange       *wrappers.Exchange
 }
 
 type EthContract string
@@ -55,7 +56,7 @@ const (
 	EthContractExchange   EthContract = "exchange"
 )
 
-func NewEthClient(
+func New(
 	ks keystore.EthKeyStore,
 	ethManager manager.EthManager,
 	defaultFromAddress common.Address,
@@ -97,6 +98,14 @@ func NewEthClient(
 	return cli, nil
 }
 
+func (cli *EthClient) Ethereum() manager.EthManager {
+	return cli.ethManager
+}
+
+func (cli *EthClient) ContractAddress(contract EthContract) common.Address {
+	return cli.contractAddresses[contract]
+}
+
 func (cli *EthClient) SetDefaultFromAddress(address common.Address) {
 	cli.nonceCache.Sync(address, func() (uint64, error) {
 		nonce, err := cli.ethManager.PendingNonceAt(context.TODO(), address)
@@ -125,8 +134,14 @@ func (cli *EthClient) initContractWrappers() error {
 		err = errors.Wrap(err, "failed to init WETH9 contract wrapper")
 		return err
 	}
-
 	cli.weth9 = weth9
+
+	exchange, err := wrappers.NewExchange(cli.contractAddresses[EthContractExchange], cli.ethManager)
+	if err != nil {
+		err = errors.Wrap(err, "failed to init Exchange contract wrapper")
+		return err
+	}
+	cli.exchange = exchange
 
 	return nil
 }
@@ -485,6 +500,50 @@ func (cli *EthClient) EthUnwrap(call *CallArgs, amount *big.Int) (txHash common.
 	return txHash, err
 }
 
+func (cli *EthClient) ExecuteTransaction(
+	call *CallArgs,
+	zeroExTx *zeroex.SignedTransaction,
+	approvalSignature []byte,
+) (txHash common.Hash, err error) {
+	opts := cli.transactOpts(call)
+
+	err = cli.nonceCache.Serialize(opts.From, func() error {
+		nonce := cli.nonceCache.Incr(opts.From)
+		var resyncUsed bool
+
+		for {
+			opts.Nonce = big.NewInt(nonce)
+			opts.Context, _ = context.WithTimeout(context.Background(), 30*time.Second)
+			opts.Value, _ = big.NewInt(0).SetString("100000000000000000", 10)
+
+			zeroExTxArg := wrappers.ZeroExTransaction{
+				Salt:                  zeroExTx.Salt,
+				ExpirationTimeSeconds: zeroExTx.ExpirationTimeSeconds,
+				GasPrice:              zeroExTx.GasPrice,
+				SignerAddress:         zeroExTx.SignerAddress,
+				Data:                  zeroExTx.Data,
+			}
+			tx, err := cli.exchange.ExecuteTransaction(opts, zeroExTxArg, approvalSignature)
+			if err != nil {
+				resyncUsed, err = cli.handleTxError(err, opts.From, resyncUsed)
+				if err != nil {
+					// unhandled error
+					return err
+				}
+
+				// try again with new nonce
+				nonce = cli.nonceCache.Incr(opts.From)
+				continue
+			}
+
+			txHash = tx.Hash()
+			return nil
+		}
+	})
+
+	return txHash, err
+}
+
 func (cli *EthClient) SignOrder(call *CallArgs, order *zeroex.Order) (*zeroex.SignedOrder, error) {
 	pk, ok := cli.keystore.PrivateKey(call.From, call.FromPass)
 	if !ok {
@@ -492,7 +551,7 @@ func (cli *EthClient) SignOrder(call *CallArgs, order *zeroex.Order) (*zeroex.Si
 		return nil, err
 	}
 
-	signedOrder, err := zeroex.SignOrder(signer.NewLocalSigner(pk), order)
+	signedOrder, err := zeroex.SignOrder(zeroex.NewLocalSigner(pk), order)
 	if err != nil {
 		err = errors.Wrap(err, "failed to sign order")
 		return nil, err
@@ -505,18 +564,16 @@ func (cli *EthClient) CreateAndSignOrder(
 	call *CallArgs,
 	makerAssetData, takerAssetData []byte,
 	makerAssetAmount, takerAssetAmount *big.Int,
-	exchangeAddress common.Address,
 ) (*zeroex.SignedOrder, error) {
 	order := &zeroex.Order{
-		ChainID: big.NewInt(int64(cli.ethManager.ChainID())),
+		ChainID: cli.chainID(),
 
-		ExchangeAddress:     common.Address{},
 		MakerAddress:        call.From,
 		MakerAssetData:      makerAssetData,
 		MakerFeeAssetData:   makerAssetData,
 		MakerAssetAmount:    makerAssetAmount,
 		MakerFee:            big.NewInt(0),
-		TakerAddress:        exchangeAddress,
+		TakerAddress:        common.Address{},
 		TakerAssetData:      takerAssetData,
 		TakerFeeAssetData:   takerAssetData,
 		TakerAssetAmount:    takerAssetAmount,
@@ -531,57 +588,68 @@ func (cli *EthClient) CreateAndSignOrder(
 	return cli.SignOrder(call, order)
 }
 
-func ro2zo(o *relayer.Order) (*zeroex.SignedOrder, error) {
-	if o == nil {
-		return nil, nil
+func (cli *EthClient) chainID() *big.Int {
+	return big.NewInt(int64(cli.ethManager.ChainID()))
+}
+
+func (cli *EthClient) SignTransaction(call *CallArgs, tx *zeroex.Transaction) (*zeroex.SignedTransaction, error) {
+	pk, ok := cli.keystore.PrivateKey(call.From, call.FromPass)
+	if !ok {
+		err := errors.New("privkey not loaded")
+		return nil, err
 	}
-	order := zeroex.Order{
-		ChainID:             big.NewInt(o.ChainID),
-		ExchangeAddress:     common.HexToAddress(o.ExchangeAddress),
-		MakerAddress:        common.HexToAddress(o.MakerAddress),
-		TakerAddress:        common.HexToAddress(o.TakerAddress),
-		MakerAssetData:      common.FromHex(o.MakerAssetData),
-		TakerAssetData:      common.FromHex(o.TakerAssetData),
-		MakerFeeAssetData:   common.FromHex(o.MakerFeeAssetData),
-		TakerFeeAssetData:   common.FromHex(o.TakerFeeAssetData),
-		SenderAddress:       common.HexToAddress(o.SenderAddress),
-		FeeRecipientAddress: common.HexToAddress(o.FeeRecipientAddress),
+
+	signedTx, err := zeroex.SignTransaction(call.From, zeroex.NewLocalSigner(pk), tx)
+	if err != nil {
+		err = errors.Wrap(err, "failed to sign transaction")
+		return nil, err
 	}
-	if v, ok := math.ParseBig256(o.MakerAssetAmount); !ok {
-		return nil, errors.New("makerAssetAmmount parse failed")
-	} else {
-		order.MakerAssetAmount = v
+
+	return signedTx, nil
+}
+
+func (cli *EthClient) CreateAndSignTransaction_FillOrders(
+	call *CallArgs,
+	exchangeAddress common.Address,
+	signedOrders []*zeroex.SignedOrder,
+	takerFillAmounts []*big.Int,
+) (*zeroex.SignedTransaction, error) {
+	orders := make([]wrappers.TrimmedOrder, len(signedOrders))
+	signatures := make([][]byte, len(signedOrders))
+
+	for idx, o := range signedOrders {
+		orders[idx] = o.Trim()
+		signatures[idx] = o.Signature
 	}
-	if v, ok := math.ParseBig256(o.MakerFee); !ok {
-		return nil, errors.New("makerFee parse failed")
-	} else {
-		order.MakerFee = v
+
+	data, err := zeroex.IExchangeABIPack(zeroex.FillOrder, orders[0], takerFillAmounts[0], signatures[0])
+	if err != nil {
+		err = errors.Wrapf(err, "failed to do ABI Pack on exchange method %s", zeroex.FillOrder)
+		return nil, err
 	}
-	if v, ok := math.ParseBig256(o.TakerAssetAmount); !ok {
-		return nil, errors.New("takerAssetAmmount parse failed")
-	} else {
-		order.TakerAssetAmount = v
+
+	return cli.signTransactionData(call, exchangeAddress, data)
+}
+
+func (cli *EthClient) signTransactionData(
+	call *CallArgs,
+	exchangeAddress common.Address,
+	data []byte,
+) (*zeroex.SignedTransaction, error) {
+	tx := &zeroex.Transaction{
+		SignerAddress: call.From,
+		Data:          data,
+		GasPrice:      call.GasPrice,
+		Domain: zeroex.EIP712Domain{
+			VerifyingContract: exchangeAddress,
+			ChainID:           cli.chainID(),
+		},
+
+		ExpirationTimeSeconds: defaultOrderTTL,
+		Salt:                  cli.nextSalt(),
 	}
-	if v, ok := math.ParseBig256(o.TakerFee); !ok {
-		return nil, errors.New("takerFee parse failed")
-	} else {
-		order.TakerFee = v
-	}
-	if v, ok := math.ParseBig256(o.ExpirationTimeSeconds); !ok {
-		return nil, errors.New("expirationTimeSeconds parse failed")
-	} else {
-		order.ExpirationTimeSeconds = v
-	}
-	if v, ok := math.ParseBig256(o.Salt); !ok {
-		return nil, errors.New("salt parse failed")
-	} else {
-		order.Salt = v
-	}
-	signedOrder := &zeroex.SignedOrder{
-		Order:     order,
-		Signature: common.FromHex(o.Signature),
-	}
-	return signedOrder, nil
+
+	return cli.SignTransaction(call, tx)
 }
 
 func (cli *EthClient) nextSalt() *big.Int {
@@ -708,7 +776,7 @@ func (a *AccountCreateArgs) check() error {
 	return nil
 }
 
-func ethCreateAccount(keystorePath string, args *AccountCreateArgs) (accounts.Account, error) {
+func CreateAccount(keystorePath string, args *AccountCreateArgs) (accounts.Account, error) {
 	if err := args.check(); err != nil {
 		return accounts.Account{}, err
 	}
@@ -725,7 +793,7 @@ type AccountImportArgs struct {
 	FilePath string
 }
 
-func ethImportAccount(keystorePath string, args *AccountImportArgs) (common.Address, error) {
+func ImportAccount(keystorePath string, args *AccountImportArgs) (common.Address, error) {
 	keyfilePath, err := homedir.Expand(args.FilePath)
 	if err != nil {
 		return common.Address{}, err
@@ -774,7 +842,7 @@ type AccountImportPrivKeyArgs struct {
 	PasswordRepeat string
 }
 
-func ethImportPrivKey(keystorePath string, args *AccountImportPrivKeyArgs) (common.Address, error) {
+func ImportPrivKey(keystorePath string, args *AccountImportPrivKeyArgs) (common.Address, error) {
 	privKeyHex := strings.TrimPrefix(args.PrivateKeyHex, "0x")
 	pk, err := crypto.HexToECDSA(privKeyHex)
 	if err != nil {
@@ -819,7 +887,7 @@ type AccountUseArgs struct {
 	Address string
 }
 
-func ethParseAccount(args *AccountUseArgs) (common.Address, error) {
+func ParseAccount(args *AccountUseArgs) (common.Address, error) {
 	addr := common.HexToAddress(args.Address)
 	if bytes.Equal(addr.Bytes(), common.Address{}.Bytes()) {
 		err := errors.Errorf("failed to parse address: %s", args.Address)
