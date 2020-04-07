@@ -10,6 +10,7 @@ package client
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -48,6 +49,8 @@ func EncodeAssetPairsRequest(encoder func(*http.Request) goahttp.Encoder) func(*
 		if p.AssetDataB != nil {
 			values.Add("assetDataB", *p.AssetDataB)
 		}
+		values.Add("page", fmt.Sprintf("%v", p.Page))
+		values.Add("perPage", fmt.Sprintf("%v", p.PerPage))
 		req.URL.RawQuery = values.Encode()
 		return nil
 	}
@@ -194,6 +197,8 @@ func EncodeOrdersRequest(encoder func(*http.Request) goahttp.Encoder) func(*http
 			return goahttp.ErrInvalidType("RelayerAPI", "orders", "*relayerapi.OrdersPayload", v)
 		}
 		values := req.URL.Query()
+		values.Add("page", fmt.Sprintf("%v", p.Page))
+		values.Add("perPage", fmt.Sprintf("%v", p.PerPage))
 		if p.MakerAssetProxyID != nil {
 			values.Add("makerAssetProxyId", *p.MakerAssetProxyID)
 		}
@@ -227,6 +232,12 @@ func EncodeOrdersRequest(encoder func(*http.Request) goahttp.Encoder) func(*http
 		if p.TakerAddress != nil {
 			values.Add("takerAddress", *p.TakerAddress)
 		}
+		if p.MakerFeeAssetData != nil {
+			values.Add("makerFeeAssetData", *p.MakerFeeAssetData)
+		}
+		if p.TakerFeeAssetData != nil {
+			values.Add("takerFeeAssetData", *p.TakerFeeAssetData)
+		}
 		if p.TraderAddress != nil {
 			values.Add("traderAddress", *p.TraderAddress)
 		}
@@ -234,10 +245,6 @@ func EncodeOrdersRequest(encoder func(*http.Request) goahttp.Encoder) func(*http
 			values.Add("feeRecipientAddress", *p.FeeRecipientAddress)
 		}
 		req.URL.RawQuery = values.Encode()
-		body := NewOrdersRequestBody(p)
-		if err := encoder(req).Encode(&body); err != nil {
-			return goahttp.ErrEncodingError("RelayerAPI", "orders", err)
-		}
 		return nil
 	}
 }
@@ -525,6 +532,8 @@ func EncodeOrderbookRequest(encoder func(*http.Request) goahttp.Encoder) func(*h
 			return goahttp.ErrInvalidType("RelayerAPI", "orderbook", "*relayerapi.OrderbookPayload", v)
 		}
 		values := req.URL.Query()
+		values.Add("page", fmt.Sprintf("%v", p.Page))
+		values.Add("perPage", fmt.Sprintf("%v", p.PerPage))
 		values.Add("baseAssetData", p.BaseAssetData)
 		values.Add("quoteAssetData", p.QuoteAssetData)
 		req.URL.RawQuery = values.Encode()

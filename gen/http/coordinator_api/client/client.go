@@ -29,6 +29,9 @@ type Client struct {
 	// soft_cancels endpoint.
 	SoftCancelsDoer goahttp.Doer
 
+	// CORS Doer is the HTTP client used to make requests to the  endpoint.
+	CORSDoer goahttp.Doer
+
 	// RestoreResponseBody controls whether the response bodies are reset after
 	// decoding so they can be read again.
 	RestoreResponseBody bool
@@ -53,6 +56,7 @@ func NewClient(
 		ConfigurationDoer:      doer,
 		RequestTransactionDoer: doer,
 		SoftCancelsDoer:        doer,
+		CORSDoer:               doer,
 		RestoreResponseBody:    restoreBody,
 		scheme:                 scheme,
 		host:                   host,

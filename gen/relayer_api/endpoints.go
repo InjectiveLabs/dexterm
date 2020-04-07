@@ -97,7 +97,8 @@ func NewOrderConfigEndpoint(s Service) goa.Endpoint {
 // "feeRecipients" of service "RelayerAPI".
 func NewFeeRecipientsEndpoint(s Service) goa.Endpoint {
 	return func(ctx context.Context, req interface{}) (interface{}, error) {
-		return s.FeeRecipients(ctx)
+		p := req.(*SRARequest)
+		return s.FeeRecipients(ctx, p)
 	}
 }
 

@@ -14,15 +14,6 @@ import (
 	goa "goa.design/goa/v3/pkg"
 )
 
-// OrdersRequestBody is the type of the "RelayerAPI" service "orders" endpoint
-// HTTP request body.
-type OrdersRequestBody struct {
-	// Filters orders with the specified makerFeeAssetData
-	MakerFeeAssetData *string `form:"makerFeeAssetData,omitempty" json:"makerFeeAssetData,omitempty" xml:"makerFeeAssetData,omitempty"`
-	// Filters orders with the specified takerFeeAssetData
-	TakerFeeAssetData *string `form:"takerFeeAssetData,omitempty" json:"takerFeeAssetData,omitempty" xml:"takerFeeAssetData,omitempty"`
-}
-
 // OrderConfigRequestBody is the type of the "RelayerAPI" service "orderConfig"
 // endpoint HTTP request body.
 type OrderConfigRequestBody struct {
@@ -198,20 +189,8 @@ type OrderConfigResponseBody struct {
 // FeeRecipientsResponseBody is the type of the "RelayerAPI" service
 // "feeRecipients" endpoint HTTP response body.
 type FeeRecipientsResponseBody struct {
-	// The maximum number of requests you're permitted to make per hour.
-	RLimitLimit *int `form:"rLimitLimit,omitempty" json:"rLimitLimit,omitempty" xml:"rLimitLimit,omitempty"`
-	// The number of requests remaining in the current rate limit window.
-	RLimitRemaining *int `form:"rLimitRemaining,omitempty" json:"rLimitRemaining,omitempty" xml:"rLimitRemaining,omitempty"`
-	// The time at which the current rate limit window resets in UTC epoch seconds.
-	RLimitReset *int `form:"rLimitReset,omitempty" json:"rLimitReset,omitempty" xml:"rLimitReset,omitempty"`
-	// Total records found in collection.
-	Total *int `form:"total,omitempty" json:"total,omitempty" xml:"total,omitempty"`
-	// The page number, starts from 1.
-	Page *int `form:"page,omitempty" json:"page,omitempty" xml:"page,omitempty"`
-	// Records limit per each page.
-	PerPage *int `form:"perPage,omitempty" json:"perPage,omitempty" xml:"perPage,omitempty"`
 	// List of all fee recipient addresses for a relayer
-	Records []string `form:"records,omitempty" json:"records,omitempty" xml:"records,omitempty"`
+	List []string `form:"list,omitempty" json:"list,omitempty" xml:"list,omitempty"`
 }
 
 // PostOrderResponseBody is the type of the "RelayerAPI" service "postOrder"
@@ -912,16 +891,6 @@ type SRAPaginatedOrderRecordsResponseBody struct {
 	Records []*OrderRecordResponseBody `form:"records,omitempty" json:"records,omitempty" xml:"records,omitempty"`
 }
 
-// NewOrdersRequestBody builds the HTTP request body from the payload of the
-// "orders" endpoint of the "RelayerAPI" service.
-func NewOrdersRequestBody(p *relayerapi.OrdersPayload) *OrdersRequestBody {
-	body := &OrdersRequestBody{
-		MakerFeeAssetData: p.MakerFeeAssetData,
-		TakerFeeAssetData: p.TakerFeeAssetData,
-	}
-	return body
-}
-
 // NewOrderConfigRequestBody builds the HTTP request body from the payload of
 // the "orderConfig" endpoint of the "RelayerAPI" service.
 func NewOrderConfigRequestBody(p *relayerapi.OrderConfigPayload) *OrderConfigRequestBody {
@@ -1445,18 +1414,11 @@ func NewOrderConfigValidationError(body *OrderConfigValidationErrorResponseBody)
 // NewFeeRecipientsResultOK builds a "RelayerAPI" service "feeRecipients"
 // endpoint result from a HTTP "OK" response.
 func NewFeeRecipientsResultOK(body *FeeRecipientsResponseBody) *relayerapi.FeeRecipientsResult {
-	v := &relayerapi.FeeRecipientsResult{
-		RLimitLimit:     body.RLimitLimit,
-		RLimitRemaining: body.RLimitRemaining,
-		RLimitReset:     body.RLimitReset,
-		Total:           *body.Total,
-		Page:            *body.Page,
-		PerPage:         *body.PerPage,
-	}
-	if body.Records != nil {
-		v.Records = make([]string, len(body.Records))
-		for i, val := range body.Records {
-			v.Records[i] = val
+	v := &relayerapi.FeeRecipientsResult{}
+	if body.List != nil {
+		v.List = make([]string, len(body.List))
+		for i, val := range body.List {
+			v.List[i] = val
 		}
 	}
 
@@ -1794,22 +1756,13 @@ func ValidateOrderConfigResponseBody(body *OrderConfigResponseBody) (err error) 
 // ValidateFeeRecipientsResponseBody runs the validations defined on
 // FeeRecipientsResponseBody
 func ValidateFeeRecipientsResponseBody(body *FeeRecipientsResponseBody) (err error) {
-	if body.Total == nil {
-		err = goa.MergeErrors(err, goa.MissingFieldError("total", "body"))
-	}
-	if body.Page == nil {
-		err = goa.MergeErrors(err, goa.MissingFieldError("page", "body"))
-	}
-	if body.PerPage == nil {
-		err = goa.MergeErrors(err, goa.MissingFieldError("perPage", "body"))
-	}
-	for _, e := range body.Records {
-		err = goa.MergeErrors(err, goa.ValidatePattern("body.records[*]", e, "^0x[0-9a-fA-F]{40}$"))
+	for _, e := range body.List {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.list[*]", e, "^0x[0-9a-fA-F]{40}$"))
 		if utf8.RuneCountInString(e) < 42 {
-			err = goa.MergeErrors(err, goa.InvalidLengthError("body.records[*]", e, utf8.RuneCountInString(e), 42, true))
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.list[*]", e, utf8.RuneCountInString(e), 42, true))
 		}
 		if utf8.RuneCountInString(e) > 42 {
-			err = goa.MergeErrors(err, goa.InvalidLengthError("body.records[*]", e, utf8.RuneCountInString(e), 42, false))
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.list[*]", e, utf8.RuneCountInString(e), 42, false))
 		}
 	}
 	return

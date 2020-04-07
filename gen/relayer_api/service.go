@@ -29,7 +29,7 @@ type Service interface {
 	// order.
 	OrderConfig(context.Context, *OrderConfigPayload) (res *OrderConfigResult, err error)
 	// Retrieves a list of all fee recipient addresses for a relayer.
-	FeeRecipients(context.Context) (res *FeeRecipientsResult, err error)
+	FeeRecipients(context.Context, *SRARequest) (res *FeeRecipientsResult, err error)
 	// Submit a signed make order to the relayer.
 	PostOrder(context.Context, *PostOrderPayload) (res *PostOrderResult, err error)
 }
@@ -47,6 +47,11 @@ var MethodNames = [7]string{"assetPairs", "orders", "orderByHash", "orderbook", 
 // AssetPairsPayload is the payload type of the RelayerAPI service assetPairs
 // method.
 type AssetPairsPayload struct {
+	// Specify page to return. Page numbering should be 1-indexed, not 0-indexed.
+	Page int
+	// Limit the amount of items returned per page.  If a query provides an
+	// unreasonable perPage value, the API will return a validation error.
+	PerPage int
 	// Asset data field of first asset in the pair.
 	AssetDataA *string
 	// Asset data field of second asset in the pair.
@@ -74,6 +79,11 @@ type AssetPairsResult struct {
 
 // OrdersPayload is the payload type of the RelayerAPI service orders method.
 type OrdersPayload struct {
+	// Specify page to return. Page numbering should be 1-indexed, not 0-indexed.
+	Page int
+	// Limit the amount of items returned per page.  If a query provides an
+	// unreasonable perPage value, the API will return a validation error.
+	PerPage int
 	// Filters orders where the maker asset is of certain asset proxy id.
 	MakerAssetProxyID *string
 	// Filters orders where the taker asset is of certain asset proxy id.
@@ -154,6 +164,11 @@ type OrderByHashResult struct {
 // OrderbookPayload is the payload type of the RelayerAPI service orderbook
 // method.
 type OrderbookPayload struct {
+	// Specify page to return. Page numbering should be 1-indexed, not 0-indexed.
+	Page int
+	// Limit the amount of items returned per page.  If a query provides an
+	// unreasonable perPage value, the API will return a validation error.
+	PerPage int
 	// Asset data (makerAssetData or takerAssetData) designated as the base
 	// currency in the currency pair calculation of price.
 	BaseAssetData string
@@ -233,23 +248,16 @@ type OrderConfigResult struct {
 	TakerFeeAssetData string
 }
 
+// SRARequest is the payload type of the RelayerAPI service feeRecipients
+// method.
+type SRARequest struct {
+}
+
 // FeeRecipientsResult is the result type of the RelayerAPI service
 // feeRecipients method.
 type FeeRecipientsResult struct {
-	// The maximum number of requests you're permitted to make per hour.
-	RLimitLimit *int
-	// The number of requests remaining in the current rate limit window.
-	RLimitRemaining *int
-	// The time at which the current rate limit window resets in UTC epoch seconds.
-	RLimitReset *int
-	// Total records found in collection.
-	Total int
-	// The page number, starts from 1.
-	Page int
-	// Records limit per each page.
-	PerPage int
 	// List of all fee recipient addresses for a relayer
-	Records []string
+	List []string
 }
 
 // PostOrderPayload is the payload type of the RelayerAPI service postOrder

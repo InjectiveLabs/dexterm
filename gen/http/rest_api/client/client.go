@@ -45,6 +45,9 @@ type Client struct {
 	// getOnlineAccounts endpoint.
 	GetOnlineAccountsDoer goahttp.Doer
 
+	// CORS Doer is the HTTP client used to make requests to the  endpoint.
+	CORSDoer goahttp.Doer
+
 	// RestoreResponseBody controls whether the response bodies are reset after
 	// decoding so they can be read again.
 	RestoreResponseBody bool
@@ -72,6 +75,7 @@ func NewClient(
 		ListTradePairsDoer:    doer,
 		GetAccountDoer:        doer,
 		GetOnlineAccountsDoer: doer,
+		CORSDoer:              doer,
 		RestoreResponseBody:   restoreBody,
 		scheme:                scheme,
 		host:                  host,

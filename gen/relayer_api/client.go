@@ -88,9 +88,9 @@ func (c *Client) OrderConfig(ctx context.Context, p *OrderConfigPayload) (res *O
 }
 
 // FeeRecipients calls the "feeRecipients" endpoint of the "RelayerAPI" service.
-func (c *Client) FeeRecipients(ctx context.Context) (res *FeeRecipientsResult, err error) {
+func (c *Client) FeeRecipients(ctx context.Context, p *SRARequest) (res *FeeRecipientsResult, err error) {
 	var ires interface{}
-	ires, err = c.FeeRecipientsEndpoint(ctx, nil)
+	ires, err = c.FeeRecipientsEndpoint(ctx, p)
 	if err != nil {
 		return
 	}
