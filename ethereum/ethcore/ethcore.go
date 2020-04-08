@@ -36,7 +36,6 @@ type EthClient struct {
 	keystore          keystore.EthKeyStore
 	ethManager        manager.EthManager
 	gasStation        gasmeter.GasStation
-	networkID         uint64
 	contractAddresses map[EthContract]common.Address
 	nonceCache        ethfw.NonceCache
 	salt              *big.Int
@@ -66,7 +65,6 @@ func New(
 	cli := &EthClient{
 		keystore:          ks,
 		ethManager:        ethManager,
-		networkID:         ethManager.ChainID(),
 		nonceCache:        ethfw.NewNonceCache(),
 		contractAddresses: contractAddresses,
 		ercWrappers:       make(map[common.Address]*wrappers.ERC20),
@@ -79,7 +77,7 @@ func New(
 		return nil, err
 	}
 
-	if allowGasOracles && cli.networkID == 1 {
+	if allowGasOracles && cli.ethManager.ChainID() == 1 {
 		// we're on Ethereum MainNet
 		gasStation, err := gasmeter.NewGasStation("https://ethgasstation.info/json/ethgasAPI.json", time.Minute)
 		if err != nil {

@@ -219,7 +219,7 @@ var (
 		Name:      "devnet-exchange",
 		Desc:      "Specify address of Exchange (Injective's Controller) contract on Ganache network",
 		EnvVar:    "DEXTERM_DEVNET_EXCHANGE",
-		Value:     "0x2C530e4Ecc573F11bd72CF5Fdf580d134d25f15F",
+		Value:     "0xdff540fe764855d3175dcfae9d91ae8aee5c6d6f",
 		SetByUser: &networksDevnetExchangeSet,
 	}
 )
