@@ -17,6 +17,12 @@ github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03
 github.com/DataDog/zstd v1.3.6-0.20190409195224-796139022798/go.mod h1:1jcaCB/ufaK+sKp1NBhlGmpz41jOoPQ35bpF36t7BBo=
 github.com/InjectiveLabs/zeroex-go v1.0.1 h1:uRwpHaD9i+hlzHgHACc1X29Q5qOrYOxeGjS5VAQUazk=
 github.com/InjectiveLabs/zeroex-go v1.0.1/go.mod h1:T3SlcvAUZr8m4cGdv/+CPX5Mei7z56zVSNXxMzdr7Ds=
+github.com/InjectiveLabs/zeroex-go v1.2.0 h1:t3oAtJm8XEz6e7xc9JEkdk1eb07JNivvSM0Tmx70Cp8=
+github.com/InjectiveLabs/zeroex-go v1.2.0/go.mod h1:T3SlcvAUZr8m4cGdv/+CPX5Mei7z56zVSNXxMzdr7Ds=
+github.com/InjectiveLabs/zeroex-go v1.3.0 h1:HOCC59QUxpjSJL4kHeR5MAUplfpAnZ1n4kL4cV0lIa4=
+github.com/InjectiveLabs/zeroex-go v1.3.0/go.mod h1:T3SlcvAUZr8m4cGdv/+CPX5Mei7z56zVSNXxMzdr7Ds=
+github.com/InjectiveLabs/zeroex-go v1.4.0 h1:D23f5OVNUfCNJQZWFNecJy0Xl6V5yMrkop57yllCI/g=
+github.com/InjectiveLabs/zeroex-go v1.4.0/go.mod h1:T3SlcvAUZr8m4cGdv/+CPX5Mei7z56zVSNXxMzdr7Ds=
 github.com/OneOfOne/xxhash v1.2.2/go.mod h1:HSdplMjZKSmBqAxg5vPj2TmRDmfkzw+cTzAElWljhcU=
 github.com/OneOfOne/xxhash v1.2.5/go.mod h1:eZbhyaAYD41SGSSsnmcpxVoRiQ/MPUTjUdIIOT9Um7Q=
 github.com/PuerkitoBio/purell v1.1.0/go.mod h1:c11w/QuzBsJSee3cPx9rAFu61PvFxuPbtSwDGJws/X0=

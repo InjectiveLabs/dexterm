@@ -44,7 +44,7 @@ type EthClient struct {
 	ercWrappers    map[common.Address]*wrappers.ERC20
 	ercWrappersMux *sync.RWMutex
 	weth9          *wrappers.WETH9
-	exchange       *wrappers.Exchange
+	exchange       *wrappers.Coordinator
 }
 
 type EthContract string
@@ -134,7 +134,7 @@ func (cli *EthClient) initContractWrappers() error {
 	}
 	cli.weth9 = weth9
 
-	exchange, err := wrappers.NewExchange(cli.contractAddresses[EthContractExchange], cli.ethManager)
+	exchange, err := wrappers.NewCoordinator(cli.contractAddresses[EthContractExchange], cli.ethManager)
 	if err != nil {
 		err = errors.Wrap(err, "failed to init Exchange contract wrapper")
 		return err
@@ -512,7 +512,9 @@ func (cli *EthClient) ExecuteTransaction(
 		for {
 			opts.Nonce = big.NewInt(nonce)
 			opts.Context, _ = context.WithTimeout(context.Background(), 30*time.Second)
-			opts.Value, _ = big.NewInt(0).SetString("100000000000000000", 10)
+			opts.Value, _ = big.NewInt(0).SetString("1000000000000000000", 10)
+			opts.GasLimit = 5000000
+			opts.GasPrice = zeroExTx.GasPrice
 
 			zeroExTxArg := wrappers.ZeroExTransaction{
 				Salt:                  zeroExTx.Salt,
@@ -521,7 +523,9 @@ func (cli *EthClient) ExecuteTransaction(
 				SignerAddress:         zeroExTx.SignerAddress,
 				Data:                  zeroExTx.Data,
 			}
-			tx, err := cli.exchange.ExecuteTransaction(opts, zeroExTxArg, approvalSignature)
+			tx, err := cli.exchange.ExecuteTransaction(opts, zeroExTxArg, zeroExTx.SignerAddress, zeroExTx.Signature, [][]byte{
+				approvalSignature,
+			})
 			if err != nil {
 				resyncUsed, err = cli.handleTxError(err, opts.From, resyncUsed)
 				if err != nil {
@@ -612,7 +616,7 @@ func (cli *EthClient) CreateAndSignTransaction_FillOrders(
 	signedOrders []*zeroex.SignedOrder,
 	takerFillAmounts []*big.Int,
 ) (*zeroex.SignedTransaction, error) {
-	orders := make([]wrappers.TrimmedOrder, len(signedOrders))
+	orders := make([]wrappers.Order, len(signedOrders))
 	signatures := make([][]byte, len(signedOrders))
 
 	for idx, o := range signedOrders {

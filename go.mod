@@ -3,7 +3,7 @@ module github.com/InjectiveLabs/dexterm
 go 1.13
 
 require (
-	github.com/InjectiveLabs/zeroex-go v1.0.1
+	github.com/InjectiveLabs/zeroex-go v1.4.0
 	github.com/VictoriaMetrics/fastcache v1.5.7 // indirect
 	github.com/aristanetworks/goarista v0.0.0-20200127212030-841b2df0a347 // indirect
 	github.com/btcsuite/btcd v0.20.1-beta // indirect
