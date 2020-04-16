@@ -564,6 +564,7 @@ func (cli *EthClient) SignOrder(call *CallArgs, order *zeroex.Order) (*zeroex.Si
 
 func (cli *EthClient) CreateAndSignOrder(
 	call *CallArgs,
+	feeRecipientAddress common.Address,
 	makerAssetData, takerAssetData []byte,
 	makerAssetAmount, takerAssetAmount *big.Int,
 ) (*zeroex.SignedOrder, error) {
@@ -581,7 +582,7 @@ func (cli *EthClient) CreateAndSignOrder(
 		TakerAssetAmount:    takerAssetAmount,
 		TakerFee:            big.NewInt(0),
 		SenderAddress:       common.Address{},
-		FeeRecipientAddress: common.Address{},
+		FeeRecipientAddress: feeRecipientAddress,
 
 		ExpirationTimeSeconds: defaultOrderTTL,
 		Salt:                  cli.nextSalt(),

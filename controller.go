@@ -46,8 +46,9 @@ type AppController struct {
 	sraClient         *clients.SRAClient
 	coordinatorClient *clients.CoordinatorClient
 
-	ethGasPrice *big.Int
-	ethCore     *ethcore.EthClient
+	ethGasPrice         *big.Int
+	ethCore             *ethcore.EthClient
+	feeRecepientAddress common.Address
 
 	keystorePath string
 	keystore     keystore.EthKeyStore
@@ -79,21 +80,40 @@ func NewAppController(configPath string) (*AppController, error) {
 	} else {
 		ctl.restClient = restClient
 
+		sraEndpoint := ctl.mustConfigValue("relayer.endpoint")
+
 		if sraClient, err := clients.NewSRAClient(restClient, &clients.SRAClientConfig{
-			Endpoint: ctl.mustConfigValue("relayer.endpoint"),
+			Endpoint: sraEndpoint,
 		}); err != nil {
 			logrus.WithError(err).Warningln("no SRA HTTP connection")
 		} else {
 			ctl.sraClient = sraClient
 		}
 
+		coordinatorEndpoint := ctl.mustConfigValue("relayer.endpoint")
+
 		if coordinatorClient, err := clients.NewCoordinatorClient(&clients.CoordinatorClientConfig{
-			Endpoint: ctl.mustConfigValue("relayer.endpoint"),
+			Endpoint: coordinatorEndpoint,
 		}); err != nil {
 			logrus.WithError(err).Warningln("no coordinator HTTP connection")
 		} else {
 			ctl.coordinatorClient = coordinatorClient
 		}
+
+		ctx, cancelFn := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancelFn()
+
+		feeRecipients, err := ctl.sraClient.FeeRecipients(ctx)
+		if err != nil {
+			logrus.Fatalln(err)
+		} else if len(feeRecipients) == 0 {
+			logrus.WithFields(logrus.Fields{
+				"endpoint": sraEndpoint,
+			}).Fatalln("no fee recipients fetched from SRA endpoint")
+		}
+
+		ctl.feeRecepientAddress = feeRecipients[0]
+		logrus.WithField("address", ctl.feeRecepientAddress.Hex()).Println("SRA endpoint provided by staker")
 	}
 
 	keystorePath := ctl.mustConfigValue("accounts.keystore")
@@ -217,6 +237,7 @@ func (ctl *AppController) ActionTradeLimitBuy(args interface{}) {
 
 	signedOrder, err := ctl.ethCore.CreateAndSignOrder(
 		callArgs,
+		ctl.feeRecepientAddress,
 		makerAssetData,
 		takerAssetData,
 		makerAmount,
@@ -308,6 +329,7 @@ func (ctl *AppController) ActionTradeLimitSell(args interface{}) {
 
 	signedOrder, err := ctl.ethCore.CreateAndSignOrder(
 		callArgs,
+		ctl.feeRecepientAddress,
 		makerAssetData,
 		takerAssetData,
 		makerAmount,

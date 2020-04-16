@@ -9,6 +9,7 @@ import (
 	"time"
 
 	zeroex "github.com/InjectiveLabs/zeroex-go"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/pkg/errors"
 	goahttp "goa.design/goa/v3/http"
 	goa "goa.design/goa/v3/pkg"
@@ -145,6 +146,24 @@ func (c *SRAClient) Order(ctx context.Context, orderHash string) (*sraAPI.Order,
 	}
 
 	return res.Order, nil
+}
+
+func (c *SRAClient) FeeRecipients(ctx context.Context) (feeRecipients []common.Address, err error) {
+	if c.client == nil {
+		return nil, errors.New("offline mode: SRA client is not available")
+	}
+
+	res, err := c.client.FeeRecipients(ctx, &sraAPI.SRARequest{})
+	if err != nil {
+		err = errors.Wrap(err, "unable to get fee recipients")
+		return nil, err
+	}
+
+	for _, addrHex := range res.List {
+		feeRecipients = append(feeRecipients, common.HexToAddress(addrHex))
+	}
+
+	return feeRecipients, nil
 }
 
 func (c *SRAClient) getTradePairByName(ctx context.Context, pairName string) (*restAPI.TradePair, error) {
