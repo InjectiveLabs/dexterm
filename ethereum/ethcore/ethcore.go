@@ -584,7 +584,7 @@ func (cli *EthClient) CreateAndSignOrder(
 		SenderAddress:       common.Address{},
 		FeeRecipientAddress: feeRecipientAddress,
 
-		ExpirationTimeSeconds: defaultOrderTTL,
+		ExpirationTimeSeconds: big.NewInt(time.Now().Add(defaultOrderTTL).Unix()),
 		Salt:                  cli.nextSalt(),
 	}
 
@@ -648,7 +648,7 @@ func (cli *EthClient) signTransactionData(
 			ChainID:           cli.chainID(),
 		},
 
-		ExpirationTimeSeconds: defaultOrderTTL,
+		ExpirationTimeSeconds: big.NewInt(time.Now().Add(defaultOrderTTL).Unix()),
 		Salt:                  cli.nextSalt(),
 	}
 
@@ -663,7 +663,7 @@ func (cli *EthClient) nextSalt() *big.Int {
 	return cli.salt
 }
 
-var defaultOrderTTL = big.NewInt(int64((30 * 24 * time.Hour).Seconds()))
+var defaultOrderTTL = 7 * 24 * time.Hour
 
 func (cli *EthClient) transactOpts(call *CallArgs) *bind.TransactOpts {
 	signerFn := cli.keystore.SignerFn(call.From, call.FromPass)

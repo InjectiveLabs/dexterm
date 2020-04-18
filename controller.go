@@ -485,9 +485,12 @@ func (ctl *AppController) ActionTradeFillOrder(args interface{}) {
 		return
 	}
 
-	approvals, _, err := ctl.coordinatorClient.GetCoordinatorApproval(ctx, signedTx, defaultAccount)
+	approvals, expiryAt, err := ctl.coordinatorClient.GetCoordinatorApproval(ctx, signedTx, defaultAccount)
 	if err != nil {
 		logrus.WithError(err).Errorln("failed to get approval from Coordinator API")
+		return
+	} else if time.Now().After(expiryAt) {
+		logrus.WithError(err).Errorln("issued approval from Coordinator API already expired")
 		return
 	}
 
