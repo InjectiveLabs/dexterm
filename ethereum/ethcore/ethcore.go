@@ -44,15 +44,16 @@ type EthClient struct {
 	ercWrappers    map[common.Address]*wrappers.ERC20
 	ercWrappersMux *sync.RWMutex
 	weth9          *wrappers.WETH9
-	exchange       *wrappers.Coordinator
+	coordinator    *wrappers.Coordinator
 }
 
 type EthContract string
 
 const (
-	EthContractERC20Proxy EthContract = "erc20proxy"
-	EthContractWETH9      EthContract = "weth9"
-	EthContractExchange   EthContract = "exchange"
+	EthContractERC20Proxy  EthContract = "erc20proxy"
+	EthContractWETH9       EthContract = "weth9"
+	EthContractExchange    EthContract = "exchange"
+	EthContractCoordinator EthContract = "coordinator"
 )
 
 func New(
@@ -134,12 +135,12 @@ func (cli *EthClient) initContractWrappers() error {
 	}
 	cli.weth9 = weth9
 
-	exchange, err := wrappers.NewCoordinator(cli.contractAddresses[EthContractExchange], cli.ethManager)
+	coordinator, err := wrappers.NewCoordinator(cli.contractAddresses[EthContractCoordinator], cli.ethManager)
 	if err != nil {
-		err = errors.Wrap(err, "failed to init Exchange contract wrapper")
+		err = errors.Wrap(err, "failed to init Coordinator contract wrapper")
 		return err
 	}
-	cli.exchange = exchange
+	cli.coordinator = coordinator
 
 	return nil
 }
@@ -523,9 +524,12 @@ func (cli *EthClient) ExecuteTransaction(
 				SignerAddress:         zeroExTx.SignerAddress,
 				Data:                  zeroExTx.Data,
 			}
-			tx, err := cli.exchange.ExecuteTransaction(opts, zeroExTxArg, zeroExTx.SignerAddress, zeroExTx.Signature, [][]byte{
-				approvalSignature,
-			})
+			tx, err := cli.coordinator.ExecuteTransaction(opts,
+				zeroExTxArg,
+				zeroExTx.SignerAddress,
+				zeroExTx.Signature,
+				[][]byte{approvalSignature},
+			)
 			if err != nil {
 				resyncUsed, err = cli.handleTxError(err, opts.From, resyncUsed)
 				if err != nil {
@@ -583,6 +587,7 @@ func (cli *EthClient) CreateAndSignOrder(
 		TakerFee:            big.NewInt(0),
 		SenderAddress:       common.Address{},
 		FeeRecipientAddress: feeRecipientAddress,
+		ExchangeAddress:     cli.ContractAddress(EthContractExchange),
 
 		ExpirationTimeSeconds: big.NewInt(time.Now().Add(defaultOrderTTL).Unix()),
 		Salt:                  cli.nextSalt(),

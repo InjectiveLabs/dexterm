@@ -85,10 +85,21 @@ var (
 	networksMainnetExchangeSet bool
 	networksMainnetExchangeOpt = cli.StringOpt{
 		Name:      "mainnet-exchange",
-		Desc:      "Specify address of Exchange (Injective's Controller) contract on MainNet network",
+		Desc:      "Specify address of 0x Exchange contract on MainNet network",
 		EnvVar:    "DEXTERM_MAINNET_EXCHANGE",
 		Value:     "",
 		SetByUser: &networksMainnetExchangeSet,
+	}
+)
+
+var (
+	networksMainnetCoordinatorSet bool
+	networksMainnetCoordinatorOpt = cli.StringOpt{
+		Name:      "mainnet-coordinator",
+		Desc:      "Specify address of Coordinator (Injective's Controller) contract on MainNet network",
+		EnvVar:    "DEXTERM_MAINNET_COORDINATOR",
+		Value:     "",
+		SetByUser: &networksMainnetCoordinatorSet,
 	}
 )
 
@@ -159,6 +170,17 @@ var (
 )
 
 var (
+	networksRopstenCoordinatorSet bool
+	networksRopstenCoordinatorOpt = cli.StringOpt{
+		Name:      "ropsten-coordinator",
+		Desc:      "Specify address of Coordinator (Injective's Controller) contract on Ropsten network",
+		EnvVar:    "DEXTERM_ROPSTEN_COORDINATOR",
+		Value:     "",
+		SetByUser: &networksRopstenCoordinatorSet,
+	}
+)
+
+var (
 	networksDevnetEndpointSet bool
 	networksDevnetEndpointOpt = cli.StringOpt{
 		Name:      "devnet-endpoint",
@@ -219,8 +241,19 @@ var (
 		Name:      "devnet-exchange",
 		Desc:      "Specify address of Exchange (Injective's Controller) contract on Ganache network",
 		EnvVar:    "DEXTERM_DEVNET_EXCHANGE",
-		Value:     "0xdff540fe764855d3175dcfae9d91ae8aee5c6d6f",
+		Value:     "0x48bacb9266a570d521063ef5dd96e61686dbe788",
 		SetByUser: &networksDevnetExchangeSet,
+	}
+)
+
+var (
+	networksDevnetCoordinatorSet bool
+	networksDevnetCoordinatorOpt = cli.StringOpt{
+		Name:      "devnet-coordinator",
+		Desc:      "Specify address of Coordinator (Injective's Controller) contract on Ganache network",
+		EnvVar:    "DEXTERM_DEVNET_COORDINATOR",
+		Value:     "0xdff540fe764855d3175dcfae9d91ae8aee5c6d6f",
+		SetByUser: &networksDevnetCoordinatorSet,
 	}
 )
 
@@ -287,5 +320,16 @@ var (
 		EnvVar:    "DEXTERM_MATIC_EXCHANGE",
 		Value:     "0x50C655DD81B65D6B48D759F897881BD5ADd86E57",
 		SetByUser: &networksMaticExchangeSet,
+	}
+)
+
+var (
+	networksMaticCoordinatorSet bool
+	networksMaticCoordinatorOpt = cli.StringOpt{
+		Name:      "matic-coordinator",
+		Desc:      "Specify address of Coordinator (Injective's Controller) contract on Matic network",
+		EnvVar:    "DEXTERM_MATIC_COORDINATOR",
+		Value:     "",
+		SetByUser: &networksMaticCoordinatorSet,
 	}
 )

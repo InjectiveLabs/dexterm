@@ -1249,10 +1249,12 @@ func (ctl *AppController) initEthClient() error {
 	weth9AddressHex := ctl.mustConfigValue(fmt.Sprintf("networks.%s.weth9_address", networkName))
 	erc20ProxyAddressHex := ctl.mustConfigValue(fmt.Sprintf("networks.%s.erc20proxy_address", networkName))
 	exchangeAddressHex := ctl.mustConfigValue(fmt.Sprintf("networks.%s.exchange_address", networkName))
+	coordinatorAddressHex := ctl.mustConfigValue(fmt.Sprintf("networks.%s.coordinator_address", networkName))
 	contractAddresses := map[ethcore.EthContract]common.Address{
-		ethcore.EthContractWETH9:      common.HexToAddress(weth9AddressHex),
-		ethcore.EthContractERC20Proxy: common.HexToAddress(erc20ProxyAddressHex),
-		ethcore.EthContractExchange:   common.HexToAddress(exchangeAddressHex),
+		ethcore.EthContractWETH9:       common.HexToAddress(weth9AddressHex),
+		ethcore.EthContractERC20Proxy:  common.HexToAddress(erc20ProxyAddressHex),
+		ethcore.EthContractExchange:    common.HexToAddress(exchangeAddressHex),
+		ethcore.EthContractCoordinator: common.HexToAddress(coordinatorAddressHex),
 	}
 
 	ethManager := manager.NewManager([]string{
