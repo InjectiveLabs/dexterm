@@ -252,7 +252,7 @@ var (
 		Name:      "kovan-coordinator",
 		Desc:      "Specify address of Coordinator (Injective's Controller) contract on Kovan network",
 		EnvVar:    "DEXTERM_KOVAN_COORDINATOR",
-		Value:     "",
+		Value:     "0x30493852999f5091d2430B6a1222Aa816237a486",
 		SetByUser: &networksKovanCoordinatorSet,
 	}
 )
