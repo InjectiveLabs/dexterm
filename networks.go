@@ -32,7 +32,7 @@ var (
 		Name:      "mainnet-endpoint",
 		Desc:      "Specify endpoint for MainNet network",
 		EnvVar:    "DEXTERM_MAINNET_ENDPOINT",
-		Value:     "https://eth-mainnet.alchemyapi.io/jsonrpc/DqEv1TiHskO-G6JprqyhE25k1x0p3hpj",
+		Value:     "https://eth-mainnet.alchemyapi.io/v2/DqEv1TiHskO-G6JprqyhE25k1x0p3hpj",
 		SetByUser: &networksMainnetEndpointSet,
 	}
 )
@@ -181,6 +181,83 @@ var (
 )
 
 var (
+	networksKovanEndpointSet bool
+	networksKovanEndpointOpt = cli.StringOpt{
+		Name:      "kovan-endpoint",
+		Desc:      "Specify endpoint for Kovan network",
+		EnvVar:    "DEXTERM_KOVAN_ENDPOINT",
+		Value:     "https://eth-kovan.alchemyapi.io/v2/9JhopJSP_O5NAgpUmbX7R09l39BLsZSh",
+		SetByUser: &networksKovanEndpointSet,
+	}
+)
+
+var (
+	networksKovanExplorerSet bool
+	networksKovanExplorerOpt = cli.StringOpt{
+		Name:      "kovan-explorer",
+		Desc:      "Specify explorer prefix for transactions on Kovan network",
+		EnvVar:    "DEXTERM_KOVAN_EXPLORER",
+		Value:     "https://kovan.etherscan.io/tx/",
+		SetByUser: &networksKovanExplorerSet,
+	}
+)
+
+var (
+	networksKovanGasPriceSet bool
+	networksKovanGasPriceOpt = cli.StringOpt{
+		Name:      "kovan-gasprice",
+		Desc:      "Specify min gasprice for Kovan network",
+		EnvVar:    "DEXTERM_KOVAN_GASPRICE",
+		Value:     "10000000000",
+		SetByUser: &networksKovanGasPriceSet,
+	}
+)
+
+var (
+	networksKovanWETH9Set bool
+	networksKovanWETH9Opt = cli.StringOpt{
+		Name:      "kovan-weth9",
+		Desc:      "Specify address of 0x WETH9 contract on Kovan network",
+		EnvVar:    "DEXTERM_KOVAN_WETH9",
+		Value:     "0xd0a1e359811322d97991e03f863a0c30c2cf029c",
+		SetByUser: &networksKovanWETH9Set,
+	}
+)
+
+var (
+	networksKovanERC20ProxySet bool
+	networksKovanERC20ProxyOpt = cli.StringOpt{
+		Name:      "kovan-erc20proxy",
+		Desc:      "Specify address of 0x ERC20Proxy contract on Kovan network",
+		EnvVar:    "DEXTERM_KOVAN_ERC20PROXY",
+		Value:     "0xf1ec01d6236d3cd881a0bf0130ea25fe4234003e",
+		SetByUser: &networksKovanERC20ProxySet,
+	}
+)
+
+var (
+	networksKovanExchangeSet bool
+	networksKovanExchangeOpt = cli.StringOpt{
+		Name:      "kovan-exchange",
+		Desc:      "Specify address of Exchange (Injective's Controller) contract on Kovan network",
+		EnvVar:    "DEXTERM_KOVAN_EXCHANGE",
+		Value:     "0x4eacd0af335451709e1e7b570b8ea68edec8bc97",
+		SetByUser: &networksKovanExchangeSet,
+	}
+)
+
+var (
+	networksKovanCoordinatorSet bool
+	networksKovanCoordinatorOpt = cli.StringOpt{
+		Name:      "kovan-coordinator",
+		Desc:      "Specify address of Coordinator (Injective's Controller) contract on Kovan network",
+		EnvVar:    "DEXTERM_KOVAN_COORDINATOR",
+		Value:     "",
+		SetByUser: &networksKovanCoordinatorSet,
+	}
+)
+
+var (
 	networksDevnetEndpointSet bool
 	networksDevnetEndpointOpt = cli.StringOpt{
 		Name:      "devnet-endpoint",
@@ -252,7 +329,8 @@ var (
 		Name:      "devnet-coordinator",
 		Desc:      "Specify address of Coordinator (Injective's Controller) contract on Ganache network",
 		EnvVar:    "DEXTERM_DEVNET_COORDINATOR",
-		Value:     "0xdff540fe764855d3175dcfae9d91ae8aee5c6d6f",
+		Value:     "0xC1bE2c0bb387aa13d5019a9c518E8BC93cb53360",
+		//Value:     "0xdff540fe764855d3175dcfae9d91ae8aee5c6d6f",
 		SetByUser: &networksDevnetCoordinatorSet,
 	}
 )

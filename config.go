@@ -134,6 +134,14 @@ var appConfigSetMap = map[string]cli.StringOpt{
 	"networks.ropsten.exchange_address":    networksRopstenExchangeOpt,
 	"networks.ropsten.coordinator_address": networksRopstenCoordinatorOpt,
 
+	"networks.kovan.endpoint":            networksKovanEndpointOpt,
+	"networks.kovan.explorer":            networksKovanExplorerOpt,
+	"networks.kovan.gas_price":           networksKovanGasPriceOpt,
+	"networks.kovan.weth9_address":       networksKovanWETH9Opt,
+	"networks.kovan.erc20proxy_address":  networksKovanERC20ProxyOpt,
+	"networks.kovan.exchange_address":    networksKovanExchangeOpt,
+	"networks.kovan.coordinator_address": networksKovanCoordinatorOpt,
+
 	"networks.devnet.endpoint":            networksDevnetEndpointOpt,
 	"networks.devnet.explorer":            networksDevnetExplorerOpt,
 	"networks.devnet.gas_price":           networksDevnetGasPriceOpt,
