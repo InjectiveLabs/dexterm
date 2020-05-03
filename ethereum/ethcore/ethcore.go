@@ -513,8 +513,8 @@ func (cli *EthClient) ExecuteTransaction(
 		for {
 			opts.Nonce = big.NewInt(nonce)
 			opts.Context, _ = context.WithTimeout(context.Background(), 30*time.Second)
-			opts.Value, _ = big.NewInt(0).SetString("1000000000000000000", 10)
-			opts.GasLimit = 5000000
+			opts.Value, _ = big.NewInt(0).SetString("10000000000000000", 10)
+			opts.GasLimit = 500000
 			opts.GasPrice = zeroExTx.GasPrice
 
 			zeroExTxArg := wrappers.ZeroExTransaction{
@@ -633,6 +633,30 @@ func (cli *EthClient) CreateAndSignTransaction_FillOrders(
 	data, err := zeroex.IExchangeABIPack(zeroex.FillOrder, orders[0], takerFillAmounts[0], signatures[0])
 	if err != nil {
 		err = errors.Wrapf(err, "failed to do ABI Pack on exchange method %s", zeroex.FillOrder)
+		return nil, err
+	}
+
+	return cli.signTransactionData(call, exchangeAddress, data)
+}
+
+
+func (cli *EthClient) CreateAndSignTransaction_MarketBuyOrders(
+	call *CallArgs,
+	exchangeAddress common.Address,
+	signedOrders []*zeroex.SignedOrder,
+	makerAssetFillAmount *big.Int,
+) (*zeroex.SignedTransaction, error) {
+	orders := make([]wrappers.Order, len(signedOrders))
+	signatures := make([][]byte, len(signedOrders))
+
+	for idx, o := range signedOrders {
+		orders[idx] = o.Trim()
+		signatures[idx] = o.Signature
+	}
+
+	data, err := zeroex.IExchangeABIPack(zeroex.MarketBuyOrdersNoThrow, orders, makerAssetFillAmount, signatures)
+	if err != nil {
+		err = errors.Wrapf(err, "failed to do ABI Pack on exchange method %s", zeroex.MarketBuyOrdersNoThrow)
 		return nil, err
 	}
 
