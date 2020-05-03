@@ -228,7 +228,7 @@ func (a *AppState) executeInRoot(cmd string) {
 		switch a.root {
 		case MenuTrade:
 			switch {
-			case oneOf(MenuItem(cmd), MenuTrade, "b", "b/limitbuy"):
+			case oneOf(MenuItem(cmd), MenuTradeLimitBuy, "b", "b/limitbuy"):
 				a.argContainer = NewArgContainer(&TradeLimitBuyOrderArgs{})
 				a.cmd = MenuTradeLimitBuy
 				a.suggestions = nil
@@ -263,6 +263,18 @@ func (a *AppState) executeInRoot(cmd string) {
 			case oneOf(MenuItem(cmd), MenuTradeMarketBuy, "mb", "mb/marketbuy"):
 				a.argContainer = NewArgContainer(&TradeMarketBuyOrderArgs{})
 				a.cmd = MenuTradeMarketBuy
+				a.suggestions = nil
+
+				a.argContainer.AddSuggestions(0, a.controller.SuggestMarkets())
+				a.argContainer.AddSuggestions(1, []prompt.Suggest{{
+					Text:        "1.00",
+					Description: "Amount must be entered as float. Minimum value is 0.0000001",
+				}})
+
+				return
+			case oneOf(MenuItem(cmd), MenuTradeMarketSell, "ms", "ms/marketsell"):
+				a.argContainer = NewArgContainer(&TradeMarketSellOrderArgs{})
+				a.cmd = MenuTradeMarketSell
 				a.suggestions = nil
 
 				a.argContainer.AddSuggestions(0, a.controller.SuggestMarkets())
@@ -402,6 +414,8 @@ func (a *AppState) executeCmd(args interface{}) {
 		a.controller.ActionTradeLimitSell(args)
 	case MenuTradeMarketBuy:
 		a.controller.ActionTradeMarketBuy(args)
+	case MenuTradeMarketSell:
+		a.controller.ActionTradeMarketSell(args)
 	case MenuTradeFillOrder:
 		a.controller.ActionTradeFillOrder(args)
 	case MenuTradeOrderbook:

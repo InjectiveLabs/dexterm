@@ -355,6 +355,11 @@ type TradeMarketBuyOrderArgs struct {
 	SignPassword string
 }
 
+type TradeMarketSellOrderArgs struct {
+	Market       string
+	Amount       string
+	SignPassword string
+}
 
 func dec2big(d decimal.Decimal) *big.Int {
 	v, _ := big.NewInt(0).SetString(d.Truncate(9).Shift(18).String(), 10)
@@ -598,6 +603,120 @@ func (ctl *AppController) ActionTradeMarketBuy(args interface{}) {
 		exchangeAddress,
 		ordersToFill,
 		dec2big(amountToBuy),
+	)
+
+	if err != nil {
+		logrus.WithError(err).Errorln("unable to create and sign transaction")
+		return
+	}
+
+	approvals, expiryAt, err := ctl.coordinatorClient.GetCoordinatorApproval(ctx, signedTx, defaultAccount)
+	if err != nil {
+		logrus.WithError(err).Errorln("failed to get approval from Coordinator API")
+		return
+	} else if time.Now().After(expiryAt) {
+		logrus.WithError(err).Errorln("issued approval from Coordinator API already expired")
+		return
+	}
+
+	txHash, err := ctl.ethCore.ExecuteTransaction(callArgs, signedTx, approvals[0])
+	if err != nil {
+		logrus.WithError(err).Errorln("unable to execute Exchange transaction")
+		return
+	}
+
+	fmt.Println(ctl.formatTxLink(txHash))
+	ctl.checkTx(txHash)
+}
+
+
+func (ctl *AppController) ActionTradeMarketSell(args interface{}) {
+	marketOrderArgs := args.(*TradeMarketSellOrderArgs)
+	amountToSell, _ := decimal.NewFromString(marketOrderArgs.Amount)
+
+	ctx := context.Background()
+	ctx, cancelFn := context.WithTimeout(ctx, 30*time.Second)
+	defer cancelFn()
+
+	tradePairs, err := ctl.restClient.TradePairs(ctx)
+	if err != nil {
+		logrus.WithError(err).Errorln("unable to fetch trade pairs")
+		return
+	}
+
+
+	var tradePair *restAPI.TradePair
+	for _, pair := range tradePairs {
+		if pair.Name != marketOrderArgs.Market {
+			continue
+		} else if !pair.Enabled {
+			continue
+		}
+
+		tradePair = pair
+		// swapped because it's a bid
+	}
+
+	if tradePair == nil {
+		logrus.WithFields(logrus.Fields{
+			"market": marketOrderArgs.Market,
+		}).Errorln("specified trade pair not found or is not enabled")
+
+		return
+	}
+
+	// get orderbook
+	bids, _, err := ctl.sraClient.Orderbook(ctx, tradePair.Name)
+	if err != nil {
+		logrus.WithField("tradePair", tradePair.Name).
+			WithError(err).Errorln("unable to get orderbook for trade pair")
+		return
+	}
+
+	// sort asks
+	sort.Slice(bids, func(i, j int) bool {
+		a, _ := decimal.NewFromString(bids[i].Order.MakerAssetAmount)
+		b, _ := decimal.NewFromString(bids[i].Order.TakerAssetAmount)
+		c, _ := decimal.NewFromString(bids[j].Order.MakerAssetAmount)
+		d, _ := decimal.NewFromString(bids[j].Order.TakerAssetAmount)
+		// TODO: check if works, may be opposite
+		return (a.Mul(d)).GreaterThan(b.Mul(c))
+	})
+	ordersToFill := []*zeroex.SignedOrder{}
+	amountToFill := decimal.NewFromInt(0)
+	for _, order := range bids {
+		//makerAmount, _ := decimal.NewFromString(order.Order.MakerAssetAmount)
+		takerAmount, _ := decimal.NewFromString(order.Order.TakerAssetAmount)
+		sum := takerAmount.Add(amountToFill)
+		if sum.GreaterThanOrEqual(amountToSell) {
+			zeroExOrder, err := ro2zo(order.Order)
+			if err != nil {
+				logrus.WithError(err).Errorln("failed to convert SRAv3 order into zeroex.SignedOrder")
+				return
+			}
+			ordersToFill = append(ordersToFill, zeroExOrder)
+			break
+		}
+	}
+
+	// fill orders
+
+	defaultAccount := common.HexToAddress(ctl.mustConfigValue("accounts.default"))
+
+	callArgs := &ethcore.CallArgs{
+		Context:  ctx,
+		From:     defaultAccount,
+		FromPass: marketOrderArgs.SignPassword,
+		GasPrice: ctl.ethGasPrice,
+	}
+
+	exchangeAddress := ctl.ethCore.ContractAddress(ethcore.EthContractExchange)
+
+	signedTx, err := ctl.ethCore.CreateAndSignTransaction_MarketSellOrders(
+		callArgs,
+		exchangeAddress,
+		ordersToFill,
+		dec2big(amountToSell),
 	)
 
 	if err != nil {
