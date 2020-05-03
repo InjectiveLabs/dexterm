@@ -16,6 +16,8 @@ github.com/BurntSushi/toml v0.3.1 h1:WXkYYl6Yr3qBf1K79EBnL4mak0OimBfB0XUf9Vl28OQ
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/InjectiveLabs/zeroex-go v1.5.0 h1:R4u4o/pKzJAK7KV+o08xXzNSTUo6MZHiTwuRZbbmfGU=
 github.com/InjectiveLabs/zeroex-go v1.5.0/go.mod h1:yyfrPO/v5KVUaXHCAgvUDOSPVdaDl/WfxxPOcjovq/o=
+github.com/InjectiveLabs/zeroex-go v1.5.6 h1:POehjTm/FvPqLnzz0u28HROLUr5I/tiq2yUdZG4KIsE=
+github.com/InjectiveLabs/zeroex-go v1.5.6/go.mod h1:yyfrPO/v5KVUaXHCAgvUDOSPVdaDl/WfxxPOcjovq/o=
 github.com/OneOfOne/xxhash v1.2.2/go.mod h1:HSdplMjZKSmBqAxg5vPj2TmRDmfkzw+cTzAElWljhcU=
 github.com/OneOfOne/xxhash v1.2.5/go.mod h1:eZbhyaAYD41SGSSsnmcpxVoRiQ/MPUTjUdIIOT9Um7Q=
 github.com/PuerkitoBio/purell v1.1.0/go.mod h1:c11w/QuzBsJSee3cPx9rAFu61PvFxuPbtSwDGJws/X0=
