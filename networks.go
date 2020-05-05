@@ -329,8 +329,7 @@ var (
 		Name:      "devnet-coordinator",
 		Desc:      "Specify address of Coordinator (Injective's Controller) contract on Ganache network",
 		EnvVar:    "DEXTERM_DEVNET_COORDINATOR",
-		Value:     "0xC1bE2c0bb387aa13d5019a9c518E8BC93cb53360",
-		//Value:     "0xdff540fe764855d3175dcfae9d91ae8aee5c6d6f",
+		Value:     "0xc1be2c0bb387aa13d5019a9c518e8bc93cb53360",
 		SetByUser: &networksDevnetCoordinatorSet,
 	}
 )
