@@ -303,7 +303,7 @@ func (a *AppState) executeInRoot(cmd string) {
 				return
 			case oneOf(MenuItem(cmd), MenuTradeCancelOrder, "c", "c/cancel"):
 				a.argContainer = NewArgContainer(&TradeCancelOrderArgs{})
-				a.cmd = MenuTradeFillOrder
+				a.cmd = MenuTradeCancelOrder
 				a.suggestions = nil
 
 				a.argContainer.AddSuggestions(0, a.controller.SuggestMarkets())
