@@ -630,7 +630,7 @@ func (cli *EthClient) CreateAndSignTransaction_FillOrders(
 		signatures[idx] = o.Signature
 	}
 
-	data, err := zeroex.IExchangeABIPack(zeroex.FillOrder, orders[0], takerFillAmounts[0], signatures[0])
+	data, err := zeroex.IExchangeABIPack(zeroex.BatchFillOrders, orders, takerFillAmounts, signatures)
 	if err != nil {
 		err = errors.Wrapf(err, "failed to do ABI Pack on exchange method %s", zeroex.FillOrder)
 		return nil, err
@@ -639,6 +639,25 @@ func (cli *EthClient) CreateAndSignTransaction_FillOrders(
 	return cli.signTransactionData(call, exchangeAddress, data)
 }
 
+func (cli *EthClient) CreateAndSignTransaction_CancelOrders(
+	call *CallArgs,
+	exchangeAddress common.Address,
+	signedOrders []*zeroex.SignedOrder,
+) (*zeroex.SignedTransaction, error) {
+	orders := make([]wrappers.Order, len(signedOrders))
+
+	for idx, o := range signedOrders {
+		orders[idx] = o.Trim()
+	}
+
+	data, err := zeroex.IExchangeABIPack(zeroex.BatchCancelOrders, orders)
+	if err != nil {
+		err = errors.Wrapf(err, "failed to do ABI Pack on exchange method %s", zeroex.CancelOrder)
+		return nil, err
+	}
+
+	return cli.signTransactionData(call, exchangeAddress, data)
+}
 
 func (cli *EthClient) CreateAndSignTransaction_MarketBuyOrders(
 	call *CallArgs,

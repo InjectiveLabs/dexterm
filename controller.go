@@ -516,6 +516,97 @@ func (ctl *AppController) ActionTradeFillOrder(args interface{}) {
 	ctl.checkTx(txHash)
 }
 
+type TradeCancelOrderArgs struct {
+	Market       string
+	OrderHash    string
+	SignPassword string
+}
+
+func (ctl *AppController) ActionTradeCancelOrder(args interface{}) {
+	cancelOrderArgs := args.(*TradeCancelOrderArgs)
+
+	ctx := context.Background()
+	ctx, cancelFn := context.WithTimeout(ctx, 30*time.Second)
+	defer cancelFn()
+
+	tradePairs, err := ctl.restClient.TradePairs(ctx)
+	if err != nil {
+		logrus.WithError(err).Errorln("unable to fetch trade pairs")
+		return
+	}
+
+	var tradePair *restAPI.TradePair
+	for _, pair := range tradePairs {
+		if pair.Name != cancelOrderArgs.Market {
+			continue
+		} else if !pair.Enabled {
+			continue
+		}
+
+		tradePair = pair
+	}
+
+	if tradePair == nil {
+		logrus.WithFields(logrus.Fields{
+			"market": cancelOrderArgs.Market,
+		}).Errorln("specified trade pair not found or is not enabled")
+
+		return
+	}
+
+	makeOrder, err := ctl.sraClient.Order(ctx, cancelOrderArgs.OrderHash)
+	if err != nil {
+		logrus.WithFields(logrus.Fields{
+			"order": cancelOrderArgs.OrderHash,
+		}).Errorln(err)
+		return
+	}
+
+	defaultAccount := common.HexToAddress(ctl.mustConfigValue("accounts.default"))
+
+	callArgs := &ethcore.CallArgs{
+		Context:  ctx,
+		From:     defaultAccount,
+		FromPass: cancelOrderArgs.SignPassword,
+		GasPrice: ctl.ethGasPrice,
+	}
+
+	exchangeAddress := ctl.ethCore.ContractAddress(ethcore.EthContractExchange)
+
+	zeroExOrder, err := ro2zo(makeOrder)
+	if err != nil {
+		logrus.WithError(err).Errorln("failed to convert SRAv3 order into zeroex.SignedOrder")
+		return
+	}
+	signedTx, err := ctl.ethCore.CreateAndSignTransaction_CancelOrders(
+		callArgs,
+		exchangeAddress,
+		[]*zeroex.SignedOrder{zeroExOrder},
+	)
+	if err != nil {
+		logrus.WithError(err).Errorln("unable to create and sign transaction")
+		return
+	}
+
+	approvals, expiryAt, err := ctl.coordinatorClient.GetCoordinatorApproval(ctx, signedTx, defaultAccount)
+	if err != nil {
+		logrus.WithError(err).Errorln("failed to get approval from Coordinator API")
+		return
+	} else if time.Now().After(expiryAt) {
+		logrus.WithError(err).Errorln("issued approval from Coordinator API already expired")
+		return
+	}
+
+	txHash, err := ctl.ethCore.ExecuteTransaction(callArgs, signedTx, approvals[0])
+	if err != nil {
+		logrus.WithError(err).Errorln("unable to execute Exchange transaction")
+		return
+	}
+
+	fmt.Println(ctl.formatTxLink(txHash))
+	ctl.checkTx(txHash)
+}
+
 func (ctl *AppController) ActionTradeMarketBuy(args interface{}) {
 	marketOrderArgs := args.(*TradeMarketBuyOrderArgs)
 	amountToBuy, _ := decimal.NewFromString(marketOrderArgs.Amount)
@@ -529,7 +620,6 @@ func (ctl *AppController) ActionTradeMarketBuy(args interface{}) {
 		logrus.WithError(err).Errorln("unable to fetch trade pairs")
 		return
 	}
-
 
 	var tradePair *restAPI.TradePair
 	for _, pair := range tradePairs {
@@ -550,7 +640,7 @@ func (ctl *AppController) ActionTradeMarketBuy(args interface{}) {
 
 		return
 	}
-	
+
 	// get orderbook
 	_, asks, err := ctl.sraClient.Orderbook(ctx, tradePair.Name)
 	if err != nil {
@@ -629,7 +719,6 @@ func (ctl *AppController) ActionTradeMarketBuy(args interface{}) {
 	ctl.checkTx(txHash)
 }
 
-
 func (ctl *AppController) ActionTradeMarketSell(args interface{}) {
 	marketOrderArgs := args.(*TradeMarketSellOrderArgs)
 	amountToSell, _ := decimal.NewFromString(marketOrderArgs.Amount)
@@ -643,7 +732,6 @@ func (ctl *AppController) ActionTradeMarketSell(args interface{}) {
 		logrus.WithError(err).Errorln("unable to fetch trade pairs")
 		return
 	}
-
 
 	var tradePair *restAPI.TradePair
 	for _, pair := range tradePairs {
@@ -1315,6 +1403,56 @@ func (ctl *AppController) SuggestOrderToFill(pairName string) []prompt.Suggest {
 		// TODO: ignore own orders
 
 		zxOrder, _ := ro2zo(bid.Order)
+		orderHash, _ := zxOrder.ComputeOrderHash()
+		price, vol := calcOrderPrice(bid.Order, true)
+		vol = vol.Shift(-18)
+
+		suggestions = append(suggestions, prompt.Suggest{
+			Text:        orderHash.Hex(),
+			Description: fmt.Sprintf("[BID] %s %s", price.StringFixed(6), vol.StringFixed(6)),
+		})
+	}
+
+	return suggestions
+}
+
+func (ctl *AppController) SuggestOrderToCancel(pairName string) []prompt.Suggest {
+	ctx, cancelFn := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancelFn()
+
+	owner := common.HexToAddress(ctl.mustConfigValue("accounts.default"))
+
+	bids, asks, err := ctl.sraClient.Orderbook(ctx, pairName)
+	if err != nil {
+		logrus.WithError(err).Warningln("failed to fetch orderbook")
+		return nil
+	}
+
+	suggestions := make([]prompt.Suggest, 0, len(bids)+len(asks))
+	for _, ask := range asks {
+		zxOrder, _ := ro2zo(ask.Order)
+		if zxOrder.MakerAddress != owner {
+			continue
+		}
+
+		orderHash, _ := zxOrder.ComputeOrderHash()
+		price, vol := calcOrderPrice(ask.Order, false)
+		vol = vol.Shift(-18)
+
+		suggestions = append(suggestions, prompt.Suggest{
+			Text:        orderHash.Hex(),
+			Description: fmt.Sprintf("[ASK] %s %s", price.StringFixed(6), vol.StringFixed(6)),
+		})
+	}
+
+	for _, bid := range bids {
+		// TODO: ignore own orders
+
+		zxOrder, _ := ro2zo(bid.Order)
+		if zxOrder.MakerAddress != owner {
+			continue
+		}
+
 		orderHash, _ := zxOrder.ComputeOrderHash()
 		price, vol := calcOrderPrice(bid.Order, true)
 		vol = vol.Shift(-18)

@@ -44,14 +44,15 @@ const (
 	MenuUtil     MenuItem = "util"
 
 	// Trade menu items
-	MenuTradeLimitBuy   MenuItem = "limitbuy"
-	MenuTradeLimitSell  MenuItem = "limitsell"
-	MenuTradeFillOrder  MenuItem = "fill"
-	MenuTradeMarketBuy  MenuItem = "marketbuy"
-	MenuTradeMarketSell MenuItem = "marketsell"
-	MenuTradeOrderbook  MenuItem = "orderbook"
-	MenuTradeTokens     MenuItem = "tokens"
-	MenuTradePairs      MenuItem = "pairs"
+	MenuTradeLimitBuy    MenuItem = "limitbuy"
+	MenuTradeLimitSell   MenuItem = "limitsell"
+	MenuTradeFillOrder   MenuItem = "fill"
+	MenuTradeCancelOrder MenuItem = "cancel"
+	MenuTradeMarketBuy   MenuItem = "marketbuy"
+	MenuTradeMarketSell  MenuItem = "marketsell"
+	MenuTradeOrderbook   MenuItem = "orderbook"
+	MenuTradeTokens      MenuItem = "tokens"
+	MenuTradePairs       MenuItem = "pairs"
 
 	// Util menu items
 	MenuUtilUnlock MenuItem = "unlock"
@@ -83,6 +84,7 @@ var tradingSuggestions = []prompt.Suggest{
 	{Text: "b/limitbuy", Description: "Create a Limit Buy order."},
 	{Text: "s/limitsell", Description: "Create a Limit Sell order."},
 	{Text: "f/fill", Description: "Fill an order (Take Order)."},
+	{Text: "c/cancel", Description: "Cancel an order."},
 
 	{Text: "mb/marketbuy", Description: "Create a Market Buy order."},
 	{Text: "ms/marketsell", Description: "Create a Market Sell order."},
@@ -299,6 +301,17 @@ func (a *AppState) executeInRoot(cmd string) {
 				}})
 
 				return
+			case oneOf(MenuItem(cmd), MenuTradeCancelOrder, "c", "c/cancel"):
+				a.argContainer = NewArgContainer(&TradeCancelOrderArgs{})
+				a.cmd = MenuTradeFillOrder
+				a.suggestions = nil
+
+				a.argContainer.AddSuggestions(0, a.controller.SuggestMarkets())
+				a.argContainer.AddSuggestionsLazy(1, []int{0}, func(args ...interface{}) []prompt.Suggest {
+					return a.controller.SuggestOrderToCancel(args[0].(string))
+				})
+
+				return
 			case oneOf(MenuItem(cmd), MenuTradeOrderbook, "o", "o/orderbook"):
 				a.argContainer = NewArgContainer(&TradeOrderbookArgs{})
 				a.cmd = MenuTradeOrderbook
@@ -418,6 +431,8 @@ func (a *AppState) executeCmd(args interface{}) {
 		a.controller.ActionTradeMarketSell(args)
 	case MenuTradeFillOrder:
 		a.controller.ActionTradeFillOrder(args)
+	case MenuTradeCancelOrder:
+		a.controller.ActionTradeCancelOrder(args)
 	case MenuTradeOrderbook:
 		a.controller.ActionTradeOrderbook(args)
 	case MenuTradeTokens:
