@@ -90,6 +90,14 @@ var appConfigMap = map[string]*string{
 	"networks.ropsten.exchange_address":    app.String(networksRopstenExchangeOpt),
 	"networks.ropsten.coordinator_address": app.String(networksRopstenCoordinatorOpt),
 
+	"networks.kovan.endpoint":            app.String(networksKovanEndpointOpt),
+	"networks.kovan.explorer":            app.String(networksKovanExplorerOpt),
+	"networks.kovan.gas_price":           app.String(networksKovanGasPriceOpt),
+	"networks.kovan.weth9_address":       app.String(networksKovanWETH9Opt),
+	"networks.kovan.erc20proxy_address":  app.String(networksKovanERC20ProxyOpt),
+	"networks.kovan.exchange_address":    app.String(networksKovanExchangeOpt),
+	"networks.kovan.coordinator_address": app.String(networksKovanCoordinatorOpt),
+
 	"networks.devnet.endpoint":            app.String(networksDevnetEndpointOpt),
 	"networks.devnet.explorer":            app.String(networksDevnetExplorerOpt),
 	"networks.devnet.gas_price":           app.String(networksDevnetGasPriceOpt),
