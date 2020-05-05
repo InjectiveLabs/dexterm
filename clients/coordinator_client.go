@@ -80,6 +80,22 @@ func (c *CoordinatorClient) GetCoordinatorApproval(
 	return approvals, expiryAt, nil
 }
 
+func (c *CoordinatorClient) SendCoordinatorSoftCancelTransaction(
+	ctx context.Context,
+	tx *zeroex.SignedTransaction,
+	txOrigin common.Address,
+) (cancellationSigs []string, err error) {
+	resp, err := c.client.RequestTransaction(ctx, &coordinatorAPI.RequestTransactionPayload{
+		SignedTransaction: ztx2ctx(tx),
+		TxOrigin:          txOrigin.Hex(),
+	})
+	if err != nil {
+		err = errors.Wrap(err, "failed to request transaction using Coordinator API")
+		return
+	}
+	return resp.CancellationSignatures, nil
+}
+
 func ztx2ctx(tx *zeroex.SignedTransaction) *coordinatorAPI.SignedTransaction {
 	ctx := &coordinatorAPI.SignedTransaction{
 		Salt:                  tx.Salt.String(),

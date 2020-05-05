@@ -578,7 +578,7 @@ func (ctl *AppController) ActionTradeCancelOrder(args interface{}) {
 		logrus.WithError(err).Errorln("failed to convert SRAv3 order into zeroex.SignedOrder")
 		return
 	}
-	signedTx, err := ctl.ethCore.CreateAndSignTransaction_CancelOrders(
+	signedTx, err := ctl.ethCore.CreateAndSignTransaction_BatchCancelOrders(
 		callArgs,
 		exchangeAddress,
 		[]*zeroex.SignedOrder{zeroExOrder},
@@ -588,23 +588,21 @@ func (ctl *AppController) ActionTradeCancelOrder(args interface{}) {
 		return
 	}
 
-	approvals, expiryAt, err := ctl.coordinatorClient.GetCoordinatorApproval(ctx, signedTx, defaultAccount)
+	cancellationSignatures, err := ctl.coordinatorClient.SendCoordinatorSoftCancelTransaction(ctx, signedTx, defaultAccount)
 	if err != nil {
 		logrus.WithError(err).Errorln("failed to get approval from Coordinator API")
 		return
-	} else if time.Now().After(expiryAt) {
-		logrus.WithError(err).Errorln("issued approval from Coordinator API already expired")
-		return
 	}
-
-	txHash, err := ctl.ethCore.ExecuteTransaction(callArgs, signedTx, approvals[0])
-	if err != nil {
-		logrus.WithError(err).Errorln("unable to execute Exchange transaction")
-		return
-	}
-
-	fmt.Println(ctl.formatTxLink(txHash))
-	ctl.checkTx(txHash)
+	fmt.Println(cancellationSignatures)
+	// No need to execute soft-cancel. Actually executing the soft-cancel on-chain would make it a hard cancel
+	//txHash, err := ctl.ethCore.ExecuteTransaction(callArgs, signedTx, approvals[0])
+	//if err != nil {
+	//	logrus.WithError(err).Errorln("unable to execute Exchange transaction")
+	//	return
+	//}
+	//
+	//fmt.Println(ctl.formatTxLink(txHash))
+	//ctl.checkTx(txHash)
 }
 
 func (ctl *AppController) ActionTradeMarketBuy(args interface{}) {
