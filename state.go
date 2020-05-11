@@ -50,6 +50,7 @@ const (
 	MenuTradeCancelOrder MenuItem = "cancel"
 	MenuTradeMarketBuy   MenuItem = "marketbuy"
 	MenuTradeMarketSell  MenuItem = "marketsell"
+	MenuTradeGenerateLimits  MenuItem = "generatelimits"
 	MenuTradeOrderbook   MenuItem = "orderbook"
 	MenuTradeTokens      MenuItem = "tokens"
 	MenuTradePairs       MenuItem = "pairs"
@@ -88,6 +89,8 @@ var tradingSuggestions = []prompt.Suggest{
 
 	{Text: "mb/marketbuy", Description: "Create a Market Buy order."},
 	{Text: "ms/marketsell", Description: "Create a Market Sell order."},
+
+	{Text: "g/generatelimits", Description: "Generate many limit buy and sell orders to populate the orderbook"},
 
 	{Text: "o/orderbook", Description: "View orderbook of a market."},
 	{Text: "t/tokens", Description: "View your account token balances."},
@@ -286,6 +289,18 @@ func (a *AppState) executeInRoot(cmd string) {
 				}})
 
 				return
+			case oneOf(MenuItem(cmd), MenuTradeGenerateLimits, "g", "g/generatelimits"):
+				a.argContainer = NewArgContainer(&TradeGenerateLimitOrdersArgs{})
+				a.cmd = MenuTradeGenerateLimits
+				a.suggestions = nil
+
+				a.argContainer.AddSuggestions(0, a.controller.SuggestMarkets())
+				a.argContainer.AddSuggestions(1, []prompt.Suggest{{
+					Text:        "1.00",
+					Description: "Amount must be entered as float. Minimum value is 0.0000001",
+				}})
+
+				return
 			case oneOf(MenuItem(cmd), MenuTradeFillOrder, "f", "f/fill"):
 				a.argContainer = NewArgContainer(&TradeFillOrderArgs{})
 				a.cmd = MenuTradeFillOrder
@@ -429,6 +444,8 @@ func (a *AppState) executeCmd(args interface{}) {
 		a.controller.ActionTradeMarketBuy(args)
 	case MenuTradeMarketSell:
 		a.controller.ActionTradeMarketSell(args)
+	case MenuTradeGenerateLimits:
+		a.controller.ActionTradeGenerateLimitOrders(args)
 	case MenuTradeFillOrder:
 		a.controller.ActionTradeFillOrder(args)
 	case MenuTradeCancelOrder:

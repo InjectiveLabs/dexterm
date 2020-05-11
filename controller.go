@@ -48,7 +48,7 @@ type AppController struct {
 
 	ethGasPrice         *big.Int
 	ethCore             *ethcore.EthClient
-	feeRecepientAddress common.Address
+	feeRecipientAddress common.Address
 
 	keystorePath string
 	keystore     keystore.EthKeyStore
@@ -112,8 +112,8 @@ func NewAppController(configPath string) (*AppController, error) {
 			}).Fatalln("no fee recipients fetched from SRA endpoint")
 		}
 
-		ctl.feeRecepientAddress = feeRecipients[0]
-		logrus.WithField("address", ctl.feeRecepientAddress.Hex()).Println("SRA endpoint provided by staker")
+		ctl.feeRecipientAddress = feeRecipients[0]
+		logrus.WithField("address", ctl.feeRecipientAddress.Hex()).Println("SRA endpoint provided by staker")
 	}
 
 	keystorePath := ctl.mustConfigValue("accounts.keystore")
@@ -237,7 +237,7 @@ func (ctl *AppController) ActionTradeLimitBuy(args interface{}) {
 
 	signedOrder, err := ctl.ethCore.CreateAndSignOrder(
 		callArgs,
-		ctl.feeRecepientAddress,
+		ctl.feeRecipientAddress,
 		makerAssetData,
 		takerAssetData,
 		makerAmount,
@@ -329,7 +329,7 @@ func (ctl *AppController) ActionTradeLimitSell(args interface{}) {
 
 	signedOrder, err := ctl.ethCore.CreateAndSignOrder(
 		callArgs,
-		ctl.feeRecepientAddress,
+		ctl.feeRecipientAddress,
 		makerAssetData,
 		takerAssetData,
 		makerAmount,
@@ -828,6 +828,135 @@ func (ctl *AppController) ActionTradeMarketSell(args interface{}) {
 	fmt.Println(ctl.formatTxLink(txHash))
 	ctl.checkTx(txHash)
 }
+
+type TradeGenerateLimitOrdersArgs struct {
+	Market       string
+	Amount       string
+	Price        string
+	SignPassword string
+}
+
+func (ctl *AppController) ActionTradeGenerateLimitOrders(args interface{}) {
+	makeBuyOrderArgs := args.(*TradeGenerateLimitOrdersArgs)
+
+	ctx := context.Background()
+	ctx, cancelFn := context.WithTimeout(ctx, 30*time.Second)
+	defer cancelFn()
+
+	tradePairs, err := ctl.restClient.TradePairs(ctx)
+	if err != nil {
+		logrus.WithError(err).Errorln("unable to fetch trade pairs")
+		return
+	}
+
+	var makerAssetData []byte
+	var takerAssetData []byte
+
+	for _, pair := range tradePairs {
+		if pair.Name != makeBuyOrderArgs.Market {
+			continue
+		}
+
+		// swapped because it's a bid
+		makerAssetData = common.FromHex(pair.TakerAssetData)
+		takerAssetData = common.FromHex(pair.MakerAssetData)
+	}
+
+	if len(makerAssetData) == 0 || len(takerAssetData) == 0 {
+		logrus.WithFields(logrus.Fields{
+			"market": makeBuyOrderArgs.Market,
+		}).Errorln("specified trade pair not found")
+
+		return
+	}
+
+	var takerAmount *big.Int
+	var price decimal.Decimal
+	var makerAmount *big.Int
+
+	takerAmountDec, err := decimal.NewFromString(makeBuyOrderArgs.Amount)
+	if err != nil {
+		logrus.WithError(err).Errorln("failed to parse buy amount")
+		return
+	} else if takerAmountDec.LessThan(decimal.RequireFromString("0.0000001")) {
+		logrus.Errorln("Buy amount is too small, must be at least 0.0000001")
+		return
+	} else {
+		takerAmount = dec2big(takerAmountDec)
+	}
+
+	if price, err = decimal.NewFromString(makeBuyOrderArgs.Price); err != nil {
+		logrus.WithError(err).Errorln("failed to parse buy price")
+		return
+	}
+	makerAmount = dec2big(takerAmountDec.Mul(price))
+
+	defaultAccount := common.HexToAddress(ctl.mustConfigValue("accounts.default"))
+
+	callArgs := &ethcore.CallArgs{
+		Context:  ctx,
+		From:     defaultAccount,
+		FromPass: makeBuyOrderArgs.SignPassword,
+		GasPrice: ctl.ethGasPrice,
+	}
+
+	// 5 make orders
+	var i int64
+	for i = 2; i < 7; i++ {
+		scale := decimal.NewFromInt(i)
+		newTakerAmountDec := takerAmountDec.Mul(scale)
+		newTakerAmount := dec2big(newTakerAmountDec)
+		signedOrder, err := ctl.ethCore.CreateAndSignOrder(
+			callArgs,
+			ctl.feeRecipientAddress,
+			makerAssetData,
+			takerAssetData,
+			makerAmount,
+			newTakerAmount,
+		)
+		if err != nil {
+			logrus.WithError(err).Errorln("unable to sign order")
+			return
+		}
+
+		orderHash, err := ctl.sraClient.PostOrder(ctx, signedOrder)
+		if err != nil {
+			logrus.WithError(err).Errorln("unable to post order")
+			return
+		}
+
+		fmt.Println(orderHash)
+	}
+
+	// 5 take orders
+	for i = 2; i < 7; i++ {
+		scale := decimal.NewFromInt(i)
+		makerAmountDec := takerAmountDec.Mul(price)
+		newMakerAmountDec := makerAmountDec.Mul(scale)
+		newMakerAmount := dec2big(newMakerAmountDec)
+		signedOrder, err := ctl.ethCore.CreateAndSignOrder(
+			callArgs,
+			ctl.feeRecipientAddress,
+			takerAssetData,
+			makerAssetData,
+			newMakerAmount,
+			takerAmount,
+		)
+		if err != nil {
+			logrus.WithError(err).Errorln("unable to sign order")
+			return
+		}
+
+		orderHash, err := ctl.sraClient.PostOrder(ctx, signedOrder)
+		if err != nil {
+			logrus.WithError(err).Errorln("unable to post order")
+			return
+		}
+
+		fmt.Println(orderHash)
+	}
+}
+
 
 type TradeOrderbookArgs struct {
 	Market string
