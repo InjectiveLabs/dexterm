@@ -32,11 +32,6 @@ func ListTradePairsRestAPIPath() string {
 	return "/api/rest/listTradePairs"
 }
 
-// ListDerivativeMarketsRestAPIPath returns the URL path to the RestAPI service listDerivativeMarkets HTTP endpoint.
-func ListDerivativeMarketsRestAPIPath() string {
-	return "/api/rest/listDerivativeMarkets"
-}
-
 // GetAccountRestAPIPath returns the URL path to the RestAPI service getAccount HTTP endpoint.
 func GetAccountRestAPIPath() string {
 	return "/api/rest/getAccount"

@@ -10,7 +10,7 @@ package client
 import (
 	"unicode/utf8"
 
-	relayerapi "github.com/InjectiveLabs/injective-core/api/gen/relayer_api"
+	relayerapi "github.com/InjectiveLabs/dexterm/gen/relayer_api"
 	goa "goa.design/goa/v3/pkg"
 )
 
@@ -18,7 +18,7 @@ import (
 // endpoint HTTP request body.
 type OrderConfigRequestBody struct {
 	// Specify chain ID.
-	ChainID int64 `form:"chainId,omitempty" json:"chainId,omitempty" xml:"chainId,omitempty"`
+	ChainID int64 `form:"chainId" json:"chainId" xml:"chainId"`
 	// Exchange v3 contract address.
 	ExchangeAddress string `form:"exchangeAddress" json:"exchangeAddress" xml:"exchangeAddress"`
 	// Address that created the order.
@@ -138,7 +138,7 @@ type OrderByHashResponseBody struct {
 	// Order item.
 	Order *OrderResponseBody `form:"order,omitempty" json:"order,omitempty" xml:"order,omitempty"`
 	// Additional meta data.
-	MetaData map[string]string `form:"metaData,omitempty" json:"metaData,omitempty" xml:"metaData,omitempty"`
+	MetaData interface{} `form:"metaData,omitempty" json:"metaData,omitempty" xml:"metaData,omitempty"`
 }
 
 // OrderbookResponseBody is the type of the "RelayerAPI" service "orderbook"
@@ -189,12 +189,6 @@ type OrderConfigResponseBody struct {
 // FeeRecipientsResponseBody is the type of the "RelayerAPI" service
 // "feeRecipients" endpoint HTTP response body.
 type FeeRecipientsResponseBody struct {
-	// The maximum number of requests you're permitted to make per hour.
-	RLimitLimit *int `form:"rLimitLimit,omitempty" json:"rLimitLimit,omitempty" xml:"rLimitLimit,omitempty"`
-	// The number of requests remaining in the current rate limit window.
-	RLimitRemaining *int `form:"rLimitRemaining,omitempty" json:"rLimitRemaining,omitempty" xml:"rLimitRemaining,omitempty"`
-	// The time at which the current rate limit window resets in UTC epoch seconds.
-	RLimitReset *int `form:"rLimitReset,omitempty" json:"rLimitReset,omitempty" xml:"rLimitReset,omitempty"`
 	// List of all fee recipient addresses for a relayer
 	List []string `form:"list,omitempty" json:"list,omitempty" xml:"list,omitempty"`
 }
@@ -835,7 +829,7 @@ type OrderRecordResponseBody struct {
 	// Order item.
 	Order *OrderResponseBody `form:"order,omitempty" json:"order,omitempty" xml:"order,omitempty"`
 	// Additional meta data.
-	MetaData map[string]string `form:"metaData,omitempty" json:"metaData,omitempty" xml:"metaData,omitempty"`
+	MetaData interface{} `form:"metaData,omitempty" json:"metaData,omitempty" xml:"metaData,omitempty"`
 }
 
 // OrderResponseBody is used to define fields on response body types.
@@ -950,9 +944,11 @@ func NewAssetPairsResultOK(body *AssetPairsResponseBody) *relayerapi.AssetPairsR
 		Page:            *body.Page,
 		PerPage:         *body.PerPage,
 	}
-	v.Records = make([]*relayerapi.AssetPairRecord, len(body.Records))
-	for i, val := range body.Records {
-		v.Records[i] = unmarshalAssetPairRecordResponseBodyToRelayerapiAssetPairRecord(val)
+	if body.Records != nil {
+		v.Records = make([]*relayerapi.AssetPairRecord, len(body.Records))
+		for i, val := range body.Records {
+			v.Records[i] = unmarshalAssetPairRecordResponseBodyToRelayerapiAssetPairRecord(val)
+		}
 	}
 
 	return v
@@ -1046,9 +1042,11 @@ func NewOrdersResultOK(body *OrdersResponseBody) *relayerapi.OrdersResult {
 		Page:            *body.Page,
 		PerPage:         *body.PerPage,
 	}
-	v.Records = make([]*relayerapi.OrderRecord, len(body.Records))
-	for i, val := range body.Records {
-		v.Records[i] = unmarshalOrderRecordResponseBodyToRelayerapiOrderRecord(val)
+	if body.Records != nil {
+		v.Records = make([]*relayerapi.OrderRecord, len(body.Records))
+		for i, val := range body.Records {
+			v.Records[i] = unmarshalOrderRecordResponseBodyToRelayerapiOrderRecord(val)
+		}
 	}
 
 	return v
@@ -1137,13 +1135,10 @@ func NewOrderByHashResultOK(body *OrderByHashResponseBody) *relayerapi.OrderByHa
 		RLimitLimit:     body.RLimitLimit,
 		RLimitRemaining: body.RLimitRemaining,
 		RLimitReset:     body.RLimitReset,
+		MetaData:        body.MetaData,
 	}
-	v.Order = unmarshalOrderResponseBodyToRelayerapiOrder(body.Order)
-	v.MetaData = make(map[string]string, len(body.MetaData))
-	for key, val := range body.MetaData {
-		tk := key
-		tv := val
-		v.MetaData[tk] = tv
+	if body.Order != nil {
+		v.Order = unmarshalOrderResponseBodyToRelayerapiOrder(body.Order)
 	}
 
 	return v
@@ -1419,11 +1414,7 @@ func NewOrderConfigValidationError(body *OrderConfigValidationErrorResponseBody)
 // NewFeeRecipientsResultOK builds a "RelayerAPI" service "feeRecipients"
 // endpoint result from a HTTP "OK" response.
 func NewFeeRecipientsResultOK(body *FeeRecipientsResponseBody) *relayerapi.FeeRecipientsResult {
-	v := &relayerapi.FeeRecipientsResult{
-		RLimitLimit:     body.RLimitLimit,
-		RLimitRemaining: body.RLimitRemaining,
-		RLimitReset:     body.RLimitReset,
-	}
+	v := &relayerapi.FeeRecipientsResult{}
 	if body.List != nil {
 		v.List = make([]string, len(body.List))
 		for i, val := range body.List {
@@ -1603,9 +1594,6 @@ func NewPostOrderValidationError(body *PostOrderValidationErrorResponseBody) *re
 // ValidateAssetPairsResponseBody runs the validations defined on
 // AssetPairsResponseBody
 func ValidateAssetPairsResponseBody(body *AssetPairsResponseBody) (err error) {
-	if body.Records == nil {
-		err = goa.MergeErrors(err, goa.MissingFieldError("records", "body"))
-	}
 	if body.Total == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("total", "body"))
 	}
@@ -1627,9 +1615,6 @@ func ValidateAssetPairsResponseBody(body *AssetPairsResponseBody) (err error) {
 
 // ValidateOrdersResponseBody runs the validations defined on OrdersResponseBody
 func ValidateOrdersResponseBody(body *OrdersResponseBody) (err error) {
-	if body.Records == nil {
-		err = goa.MergeErrors(err, goa.MissingFieldError("records", "body"))
-	}
 	if body.Total == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("total", "body"))
 	}
@@ -1652,12 +1637,6 @@ func ValidateOrdersResponseBody(body *OrdersResponseBody) (err error) {
 // ValidateOrderByHashResponseBody runs the validations defined on
 // OrderByHashResponseBody
 func ValidateOrderByHashResponseBody(body *OrderByHashResponseBody) (err error) {
-	if body.Order == nil {
-		err = goa.MergeErrors(err, goa.MissingFieldError("order", "body"))
-	}
-	if body.MetaData == nil {
-		err = goa.MergeErrors(err, goa.MissingFieldError("metaData", "body"))
-	}
 	if body.Order != nil {
 		if err2 := ValidateOrderResponseBody(body.Order); err2 != nil {
 			err = goa.MergeErrors(err, err2)
@@ -2766,12 +2745,6 @@ func ValidateSRAValidationErrorResponseBody(body *SRAValidationErrorResponseBody
 // ValidateOrderRecordResponseBody runs the validations defined on
 // OrderRecordResponseBody
 func ValidateOrderRecordResponseBody(body *OrderRecordResponseBody) (err error) {
-	if body.Order == nil {
-		err = goa.MergeErrors(err, goa.MissingFieldError("order", "body"))
-	}
-	if body.MetaData == nil {
-		err = goa.MergeErrors(err, goa.MissingFieldError("metaData", "body"))
-	}
 	if body.Order != nil {
 		if err2 := ValidateOrderResponseBody(body.Order); err2 != nil {
 			err = goa.MergeErrors(err, err2)
@@ -2834,8 +2807,8 @@ func ValidateOrderResponseBody(body *OrderResponseBody) (err error) {
 		err = goa.MergeErrors(err, goa.MissingFieldError("signature", "body"))
 	}
 	if body.ChainID != nil {
-		if !(*body.ChainID == 1 || *body.ChainID == 3 || *body.ChainID == 4 || *body.ChainID == 42 || *body.ChainID == 1337) {
-			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.chainId", *body.ChainID, []interface{}{1, 3, 4, 42, 1337}))
+		if !(*body.ChainID == 1 || *body.ChainID == 42 || *body.ChainID == 3 || *body.ChainID == 4 || *body.ChainID == 1337) {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.chainId", *body.ChainID, []interface{}{1, 42, 3, 4, 1337}))
 		}
 	}
 	if body.ExchangeAddress != nil {
@@ -3012,9 +2985,6 @@ func ValidateOrderResponseBody(body *OrderResponseBody) (err error) {
 // ValidateSRAPaginatedOrderRecordsResponseBody runs the validations defined on
 // SRAPaginatedOrderRecordsResponseBody
 func ValidateSRAPaginatedOrderRecordsResponseBody(body *SRAPaginatedOrderRecordsResponseBody) (err error) {
-	if body.Records == nil {
-		err = goa.MergeErrors(err, goa.MissingFieldError("records", "body"))
-	}
 	if body.Total == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("total", "body"))
 	}

@@ -8,7 +8,7 @@
 package client
 
 import (
-	debugapi "github.com/InjectiveLabs/injective-core/api/gen/debug_api"
+	debugapi "github.com/InjectiveLabs/dexterm/gen/debug_api"
 	goa "goa.design/goa/v3/pkg"
 )
 

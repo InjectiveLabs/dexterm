@@ -10,7 +10,7 @@ package client
 import (
 	"unicode/utf8"
 
-	coordinatorapi "github.com/InjectiveLabs/injective-core/api/gen/coordinator_api"
+	coordinatorapi "github.com/InjectiveLabs/dexterm/gen/coordinator_api"
 	goa "goa.design/goa/v3/pkg"
 )
 

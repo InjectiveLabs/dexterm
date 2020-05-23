@@ -37,10 +37,6 @@ type Client struct {
 	// listTradePairs endpoint.
 	ListTradePairsDoer goahttp.Doer
 
-	// ListDerivativeMarkets Doer is the HTTP client used to make requests to the
-	// listDerivativeMarkets endpoint.
-	ListDerivativeMarketsDoer goahttp.Doer
-
 	// GetAccount Doer is the HTTP client used to make requests to the getAccount
 	// endpoint.
 	GetAccountDoer goahttp.Doer
@@ -72,20 +68,19 @@ func NewClient(
 	restoreBody bool,
 ) *Client {
 	return &Client{
-		GetActiveOrderDoer:        doer,
-		GetArchiveOrderDoer:       doer,
-		ListOrdersDoer:            doer,
-		GetTradePairDoer:          doer,
-		ListTradePairsDoer:        doer,
-		ListDerivativeMarketsDoer: doer,
-		GetAccountDoer:            doer,
-		GetOnlineAccountsDoer:     doer,
-		CORSDoer:                  doer,
-		RestoreResponseBody:       restoreBody,
-		scheme:                    scheme,
-		host:                      host,
-		decoder:                   dec,
-		encoder:                   enc,
+		GetActiveOrderDoer:    doer,
+		GetArchiveOrderDoer:   doer,
+		ListOrdersDoer:        doer,
+		GetTradePairDoer:      doer,
+		ListTradePairsDoer:    doer,
+		GetAccountDoer:        doer,
+		GetOnlineAccountsDoer: doer,
+		CORSDoer:              doer,
+		RestoreResponseBody:   restoreBody,
+		scheme:                scheme,
+		host:                  host,
+		decoder:               dec,
+		encoder:               enc,
 	}
 }
 
@@ -204,30 +199,6 @@ func (c *Client) ListTradePairs() goa.Endpoint {
 		resp, err := c.ListTradePairsDoer.Do(req)
 		if err != nil {
 			return nil, goahttp.ErrRequestError("RestAPI", "listTradePairs", err)
-		}
-		return decodeResponse(resp)
-	}
-}
-
-// ListDerivativeMarkets returns an endpoint that makes HTTP requests to the
-// RestAPI service listDerivativeMarkets server.
-func (c *Client) ListDerivativeMarkets() goa.Endpoint {
-	var (
-		encodeRequest  = EncodeListDerivativeMarketsRequest(c.encoder)
-		decodeResponse = DecodeListDerivativeMarketsResponse(c.decoder, c.RestoreResponseBody)
-	)
-	return func(ctx context.Context, v interface{}) (interface{}, error) {
-		req, err := c.BuildListDerivativeMarketsRequest(ctx, v)
-		if err != nil {
-			return nil, err
-		}
-		err = encodeRequest(req, v)
-		if err != nil {
-			return nil, err
-		}
-		resp, err := c.ListDerivativeMarketsDoer.Do(req)
-		if err != nil {
-			return nil, goahttp.ErrRequestError("RestAPI", "listDerivativeMarkets", err)
 		}
 		return decodeResponse(resp)
 	}
