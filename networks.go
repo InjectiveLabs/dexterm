@@ -93,6 +93,17 @@ var (
 )
 
 var (
+	networksMainnetFuturesSet bool
+	networksMainnetFuturesOpt = cli.StringOpt{
+		Name:      "mainnet-futures",
+		Desc:      "Specify address of Futures contract on MainNet network",
+		EnvVar:    "DEXTERM_MAINNET_FUTURES",
+		Value:     "",
+		SetByUser: &networksMainnetFuturesSet,
+	}
+)
+
+var (
 	networksMainnetCoordinatorSet bool
 	networksMainnetCoordinatorOpt = cli.StringOpt{
 		Name:      "mainnet-coordinator",
@@ -170,6 +181,19 @@ var (
 )
 
 var (
+	networksRopstenFuturesSet bool
+	networksRopstenFuturesOpt = cli.StringOpt{
+		Name:      "ropsten-futures",
+		Desc:      "Specify address of Futures contract on Ropsten network",
+		EnvVar:    "DEXTERM_ROPSTEN_FUTURES",
+		Value:     "",
+		SetByUser: &networksRopstenFuturesSet,
+	}
+)
+
+
+
+var (
 	networksRopstenCoordinatorSet bool
 	networksRopstenCoordinatorOpt = cli.StringOpt{
 		Name:      "ropsten-coordinator",
@@ -243,6 +267,17 @@ var (
 		EnvVar:    "DEXTERM_KOVAN_EXCHANGE",
 		Value:     "0x4eacd0af335451709e1e7b570b8ea68edec8bc97",
 		SetByUser: &networksKovanExchangeSet,
+	}
+)
+
+var (
+	networksKovanFuturesSet bool
+	networksKovanFuturesOpt = cli.StringOpt{
+		Name:      "kovan-futures",
+		Desc:      "Specify address of Futures contract on Kovan network",
+		EnvVar:    "DEXTERM_KOVAN_FUTURES",
+		Value:     "0x4eacd0af335451709e1e7b570b8ea68edec8bc97",
+		SetByUser: &networksKovanFuturesSet,
 	}
 )
 
@@ -324,6 +359,17 @@ var (
 )
 
 var (
+	networksDevnetFuturesSet bool
+	networksDevnetFuturesOpt = cli.StringOpt{
+		Name:      "devnet-futures",
+		Desc:      "Specify address of Futures contract on Ganache network",
+		EnvVar:    "DEXTERM_DEVNET_FUTURES",
+		Value:     "0x48bacb9266a570d521063ef5dd96e61686dbe788",
+		SetByUser: &networksDevnetFuturesSet,
+	}
+)
+
+var (
 	networksDevnetCoordinatorSet bool
 	networksDevnetCoordinatorOpt = cli.StringOpt{
 		Name:      "devnet-coordinator",
@@ -397,6 +443,17 @@ var (
 		EnvVar:    "DEXTERM_MATIC_EXCHANGE",
 		Value:     "0x50C655DD81B65D6B48D759F897881BD5ADd86E57",
 		SetByUser: &networksMaticExchangeSet,
+	}
+)
+
+var (
+	networksMaticFuturesSet bool
+	networksMaticFuturesOpt = cli.StringOpt{
+		Name:      "matic-futures",
+		Desc:      "Specify address of Futures contract on Matic network",
+		EnvVar:    "DEXTERM_MATIC_FUTURES",
+		Value:     "0x50C655DD81B65D6B48D759F897881BD5ADd86E57",
+		SetByUser: &networksMaticFuturesSet,
 	}
 )
 

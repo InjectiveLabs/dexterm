@@ -107,6 +107,20 @@ func (c *RESTClient) TradePairs(ctx context.Context) ([]*restAPI.TradePair, erro
 	return res.TradePairs, nil
 }
 
+func (c *RESTClient) DerivativeMarkets(ctx context.Context) ([]*restAPI.DerivativeMarket, error) {
+	if c.client == nil {
+		return nil, errors.New("offline mode: REST client is not available")
+	}
+
+	res, err := c.client.ListDerivativeMarkets(ctx, &restAPI.ListDerivativeMarketsPayload{})
+	if err != nil {
+		err = errors.Wrap(err, "failed to list trade pairs")
+		return nil, err
+	}
+
+	return res.Markets, nil
+}
+
 func newRESTClient(scheme, host string, timeout time.Duration, debug bool) *restAPI.Client {
 	var doer goahttp.Doer
 
@@ -133,6 +147,7 @@ func newRESTClient(scheme, host string, timeout time.Duration, debug bool) *rest
 		c.ListOrders(),
 		c.GetTradePair(),
 		c.ListTradePairs(),
+		c.ListDerivativeMarkets(),
 		c.GetAccount(),
 		c.GetOnlineAccounts(),
 	)

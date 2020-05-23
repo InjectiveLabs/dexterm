@@ -39,21 +39,27 @@ const (
 	MenuMain MenuItem = "main"
 
 	// Main menu items
-	MenuTrade    MenuItem = "trade"
-	MenuAccounts MenuItem = "keystore"
-	MenuUtil     MenuItem = "util"
+	MenuTrade       MenuItem = "trade-spot"
+	MenuDerivatives MenuItem = "trade-derivatives"
+	MenuAccounts    MenuItem = "keystore"
+	MenuUtil        MenuItem = "util"
 
 	// Trade menu items
-	MenuTradeLimitBuy    MenuItem = "limitbuy"
-	MenuTradeLimitSell   MenuItem = "limitsell"
-	MenuTradeFillOrder   MenuItem = "fill"
-	MenuTradeCancelOrder MenuItem = "cancel"
-	MenuTradeMarketBuy   MenuItem = "marketbuy"
-	MenuTradeMarketSell  MenuItem = "marketsell"
-	MenuTradeGenerateLimits  MenuItem = "generatelimits"
-	MenuTradeOrderbook   MenuItem = "orderbook"
-	MenuTradeTokens      MenuItem = "tokens"
-	MenuTradePairs       MenuItem = "pairs"
+	MenuTradeLimitBuy       MenuItem = "limitbuy"
+	MenuTradeLimitSell      MenuItem = "limitsell"
+	MenuTradeFillOrder      MenuItem = "fill"
+	MenuTradeCancelOrder    MenuItem = "cancel"
+	MenuTradeMarketBuy      MenuItem = "marketbuy"
+	MenuTradeMarketSell     MenuItem = "marketsell"
+	MenuTradeGenerateLimits MenuItem = "generatelimits"
+	MenuTradeOrderbook      MenuItem = "orderbook"
+	MenuTradeTokens         MenuItem = "tokens"
+	MenuTradePairs          MenuItem = "pairs"
+
+	// Derivatives menu items
+	MenuDerivativesLimitLong  MenuItem = "limitlong"
+	MenuDerivativesLimitShort MenuItem = "limitsshort"
+	MenuDerivativesOrderbook MenuItem = "derivatives-orderbook"
 
 	// Util menu items
 	MenuUtilUnlock MenuItem = "unlock"
@@ -74,7 +80,8 @@ const (
 )
 
 var mainSuggestions = []prompt.Suggest{
-	{Text: "t/trade", Description: "Start creating Buy and Sell orders with DEX trade mode."},
+	{Text: "t/trade-spot", Description: "Start creating Buy and Sell orders with DEX trade mode."},
+	{Text: "d/trade-derivatives", Description: "Start creating Derivatives orders with DEX trade mode."},
 	{Text: "k/keystore", Description: "Manage Ethereum accounts and private keys."},
 	{Text: "u/util", Description: "Misc utils for working with wallet balances."},
 	{Text: "a/about", Description: "Print information about this app."},
@@ -96,6 +103,14 @@ var tradingSuggestions = []prompt.Suggest{
 	{Text: "t/tokens", Description: "View your account token balances."},
 	{Text: "p/pairs", Description: "View available pairs for trade."},
 	// {Text: "h/history", Description: "Show historical data."},
+	{Text: "q/quit", Description: "Quit from the trading menu."},
+}
+
+var derivativesSuggestions = []prompt.Suggest{
+	{Text: "l/limitlong", Description: "Create a Limit Long order."},
+	{Text: "s/limitshort", Description: "Create a Limit Short order."},
+
+	{Text: "o/orderbook", Description: "View orderbook of a market."},
 	{Text: "q/quit", Description: "Quit from the trading menu."},
 }
 
@@ -345,6 +360,52 @@ func (a *AppState) executeInRoot(cmd string) {
 				logrus.Warningf("unknown command: %s", cmd)
 				return
 			}
+		case MenuDerivatives:
+			switch {
+			case oneOf(MenuItem(cmd), MenuDerivativesLimitLong, "l", "l/limitlong"):
+				a.argContainer = NewArgContainer(&TradeDerivativeLimitOrderArgs{})
+				a.cmd = MenuDerivativesLimitLong
+				a.suggestions = nil
+				a.argContainer.AddSuggestions(0, a.controller.SuggestDerivativesMarkets())
+
+				a.argContainer.AddSuggestions(1, []prompt.Suggest{{
+					Text:        "10",
+					Description: "Quantity must be entered as positive integer. Minimum value is 1",
+				}})
+				a.argContainer.AddSuggestions(2, []prompt.Suggest{{
+					Text:        "1.00",
+					Description: "Price must be entered as float. Minimum value is 0.0000001",
+				}})
+
+				return
+			case oneOf(MenuItem(cmd), MenuDerivativesLimitShort, "s", "s/limitshort"):
+				a.argContainer = NewArgContainer(&TradeDerivativeLimitOrderArgs{})
+				a.cmd = MenuDerivativesLimitShort
+				a.suggestions = nil
+
+				a.argContainer.AddSuggestions(0, a.controller.SuggestMarkets())
+				a.argContainer.AddSuggestions(1, []prompt.Suggest{{
+					Text:        "10",
+					Description: "Quantity must be entered as positive integer. Minimum value is 1",
+				}})
+				a.argContainer.AddSuggestions(2, []prompt.Suggest{{
+					Text:        "1.00",
+					Description: "Price must be entered as float. Minimum value is 0.0000001",
+				}})
+
+				return
+			case oneOf(MenuItem(cmd), MenuDerivativesOrderbook, "o", "o/orderbook"):
+				a.argContainer = NewArgContainer(&DerivativeOrderbookArgs{})
+				a.cmd = MenuDerivativesOrderbook
+				a.suggestions = nil
+
+				a.argContainer.AddSuggestions(0, a.controller.SuggestMarkets())
+
+				return
+			default:
+				logrus.Warningf("unknown command: %s", cmd)
+				return
+			}
 		case MenuAccounts:
 			switch {
 			case oneOf(MenuItem(cmd), MenuAccountsUse, "u", "u/use"):
@@ -436,6 +497,12 @@ func (a *AppState) executeInRoot(cmd string) {
 
 func (a *AppState) executeCmd(args interface{}) {
 	switch a.cmd {
+	case MenuDerivativesLimitLong:
+		a.controller.ActionDerivativesLimitLong(args)
+	case MenuDerivativesLimitShort:
+		a.controller.ActionDerivativesLimitShort(args)
+	case MenuDerivativesOrderbook:
+		a.controller.ActionDerivativesOrderbook(args)
 	case MenuTradeLimitBuy:
 		a.controller.ActionTradeLimitBuy(args)
 	case MenuTradeLimitSell:
@@ -488,9 +555,17 @@ func (a *AppState) changeRoot(newRoot MenuItem) {
 		a.controller.ActionAbout()
 	case oneOf(newRoot, MenuQuit, "q", "q/quit", "exit"):
 		a.controller.ActionQuit()
-	case oneOf(newRoot, MenuTrade, "t", "t/trade"):
+	case oneOf(newRoot, MenuTrade, "t", "t/trade-spot"):
 		a.root = MenuTrade
 		a.suggestions = tradingSuggestions
+
+		_, ok := a.controller.getConfigValue("accounts.default")
+		if !ok {
+			logrus.Warningln("Default account is not set, go to keystore menu first.")
+		}
+	case oneOf(newRoot, MenuDerivatives, "d", "t/trade-derivatives"):
+		a.root = MenuDerivatives
+		a.suggestions = derivativesSuggestions
 
 		_, ok := a.controller.getConfigValue("accounts.default")
 		if !ok {

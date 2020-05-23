@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"golang.org/x/crypto/sha3"
 	"math/big"
 	"os"
 	"sort"
@@ -28,6 +29,7 @@ import (
 	"github.com/InjectiveLabs/dexterm/ethereum/ethfw/keystore"
 	"github.com/InjectiveLabs/dexterm/ethereum/ethfw/manager"
 	sraAPI "github.com/InjectiveLabs/dexterm/gen/relayer_api"
+	//sdaAPI "github.com/InjectiveLabs/dexterm/gen/derivatives_api"
 	restAPI "github.com/InjectiveLabs/dexterm/gen/rest_api"
 )
 
@@ -44,6 +46,7 @@ type AppController struct {
 	debugClient       *clients.DebugClient
 	restClient        *clients.RESTClient
 	sraClient         *clients.SRAClient
+	sdaClient         *clients.SDAClient
 	coordinatorClient *clients.CoordinatorClient
 
 	ethGasPrice         *big.Int
@@ -88,6 +91,16 @@ func NewAppController(configPath string) (*AppController, error) {
 			logrus.WithError(err).Warningln("no SRA HTTP connection")
 		} else {
 			ctl.sraClient = sraClient
+		}
+
+		sdaEndpoint := ctl.mustConfigValue("derivatives.endpoint")
+
+		if sdaClient, err := clients.NewSDAClient(restClient, &clients.SDAClientConfig{
+			Endpoint: sdaEndpoint,
+		}); err != nil {
+			logrus.WithError(err).Warningln("no SDA HTTP connection")
+		} else {
+			ctl.sdaClient = sdaClient
 		}
 
 		coordinatorEndpoint := ctl.mustConfigValue("relayer.endpoint")
@@ -169,6 +182,186 @@ type TradeLimitBuyOrderArgs struct {
 	Amount       string
 	Price        string
 	SignPassword string
+}
+
+type TradeDerivativeLimitOrderArgs struct {
+	Market       string
+	Quantity     string
+	Price        string
+	SignPassword string
+}
+
+// keccak256 calculates and returns the Keccak256 hash of the input data.
+func keccak256(data ...[]byte) []byte {
+	d := sha3.NewLegacyKeccak256()
+	for _, b := range data {
+		_, _ = d.Write(b)
+	}
+	return d.Sum(nil)
+}
+
+func (ctl *AppController) ActionDerivativesLimitLong(args interface{}) {
+	makeDerivativeOrderArgs := args.(*TradeDerivativeLimitOrderArgs)
+
+	ctx := context.Background()
+	ctx, cancelFn := context.WithTimeout(ctx, 30*time.Second)
+	defer cancelFn()
+
+	markets, err := ctl.restClient.DerivativeMarkets(ctx)
+	if err != nil {
+		logrus.WithError(err).Errorln("unable to fetch trade pairs")
+		return
+	}
+
+	var makerAssetData []byte
+	var takerAssetData []byte
+
+	defaultAccount := common.HexToAddress(ctl.mustConfigValue("accounts.default"))
+	for _, market := range markets {
+		if market.Ticker != makeDerivativeOrderArgs.Market {
+			continue
+		}
+		// TODO: need to call getAccounts to get list of accountIDs to allow trader to select account to trade from earlier
+		nonce := big.NewInt(1)
+		makerAssetData = keccak256(defaultAccount.Bytes(), nonce.Bytes())
+		takerAssetData = common.FromHex(market.MarketID)
+	}
+
+	if len(takerAssetData) == 0 {
+		logrus.WithFields(logrus.Fields{
+			"market": makeDerivativeOrderArgs.Market,
+		}).Errorln("specified market not found")
+		return
+	}
+
+	var takerAssetAmount *big.Int
+	var makerAssetAmount *big.Int
+	quantity, err := decimal.NewFromString(makeDerivativeOrderArgs.Quantity)
+	if err != nil {
+		logrus.WithError(err).Errorln("failed to parse buy amount")
+		return
+	} else if quantity.LessThan(decimal.RequireFromString("1.0")) {
+		logrus.Errorln("Buy amount is too small, must be at least 1")
+		return
+	} else {
+		takerAssetAmount = dec2big(quantity)
+	}
+	price, err := decimal.NewFromString(makeDerivativeOrderArgs.Price)
+	if err != nil {
+		logrus.WithError(err).Errorln("failed to parse buy price")
+		return
+	}
+	makerAssetAmount = dec2big(price)
+
+	callArgs := &ethcore.CallArgs{
+		Context:  ctx,
+		From:     defaultAccount,
+		FromPass: makeDerivativeOrderArgs.SignPassword,
+		GasPrice: ctl.ethGasPrice,
+	}
+
+	signedOrder, err := ctl.ethCore.CreateAndSignDerivativesOrder(
+		callArgs,
+		makerAssetData,
+		takerAssetData,
+		makerAssetAmount,
+		takerAssetAmount,
+		true,
+	)
+	if err != nil {
+		logrus.WithError(err).Errorln("unable to sign order")
+		return
+	}
+
+	orderHash, err := ctl.sdaClient.PostOrder(ctx, signedOrder)
+	if err != nil {
+		logrus.WithError(err).Errorln("unable to post order")
+		return
+	}
+
+	fmt.Println(orderHash)
+}
+
+func (ctl *AppController) ActionDerivativesLimitShort(args interface{}) {
+	makeDerivativeOrderArgs := args.(*TradeDerivativeLimitOrderArgs)
+
+	ctx := context.Background()
+	ctx, cancelFn := context.WithTimeout(ctx, 30*time.Second)
+	defer cancelFn()
+
+	markets, err := ctl.restClient.DerivativeMarkets(ctx)
+	if err != nil {
+		logrus.WithError(err).Errorln("unable to fetch trade pairs")
+		return
+	}
+
+	var makerAssetData []byte
+	var takerAssetData []byte
+
+	defaultAccount := common.HexToAddress(ctl.mustConfigValue("accounts.default"))
+	for _, market := range markets {
+		if market.Ticker != makeDerivativeOrderArgs.Market {
+			continue
+		}
+		// TODO: need to call getAccounts to get list of accountIDs to allow trader to select account to trade from earlier
+		nonce := big.NewInt(1)
+		makerAssetData = keccak256(defaultAccount.Bytes(), nonce.Bytes())
+		takerAssetData = common.FromHex(market.MarketID)
+	}
+
+	if len(takerAssetData) == 0 {
+		logrus.WithFields(logrus.Fields{
+			"market": makeDerivativeOrderArgs.Market,
+		}).Errorln("specified market not found")
+		return
+	}
+
+	var takerAssetAmount *big.Int
+	var makerAssetAmount *big.Int
+	quantity, err := decimal.NewFromString(makeDerivativeOrderArgs.Quantity)
+	if err != nil {
+		logrus.WithError(err).Errorln("failed to parse buy amount")
+		return
+	} else if quantity.LessThan(decimal.RequireFromString("1.0")) {
+		logrus.Errorln("Buy amount is too small, must be at least 1")
+		return
+	} else {
+		takerAssetAmount = dec2big(quantity)
+	}
+	price, err := decimal.NewFromString(makeDerivativeOrderArgs.Price)
+	if err != nil {
+		logrus.WithError(err).Errorln("failed to parse buy price")
+		return
+	}
+	makerAssetAmount = dec2big(price)
+
+	callArgs := &ethcore.CallArgs{
+		Context:  ctx,
+		From:     defaultAccount,
+		FromPass: makeDerivativeOrderArgs.SignPassword,
+		GasPrice: ctl.ethGasPrice,
+	}
+
+	signedOrder, err := ctl.ethCore.CreateAndSignDerivativesOrder(
+		callArgs,
+		makerAssetData,
+		takerAssetData,
+		makerAssetAmount,
+		takerAssetAmount,
+		false,
+	)
+	if err != nil {
+		logrus.WithError(err).Errorln("unable to sign order")
+		return
+	}
+
+	orderHash, err := ctl.sdaClient.PostOrder(ctx, signedOrder)
+	if err != nil {
+		logrus.WithError(err).Errorln("unable to post order")
+		return
+	}
+
+	fmt.Println(orderHash)
 }
 
 func (ctl *AppController) ActionTradeLimitBuy(args interface{}) {
@@ -957,6 +1150,79 @@ func (ctl *AppController) ActionTradeGenerateLimitOrders(args interface{}) {
 	}
 }
 
+type DerivativeOrderbookArgs struct {
+	Market string
+}
+
+func (ctl *AppController) ActionDerivativesOrderbook(args interface{}) {
+	//_ := args.(*DerivativeOrderbookArgs)
+	//
+	//ctx := context.Background()
+	//ctx, cancelFn := context.WithTimeout(ctx, 30*time.Second)
+	//defer cancelFn()
+	//
+	//defaultAccount := common.HexToAddress(ctl.mustConfigValue("accounts.default"))
+	//
+	//bids, asks, err := ctl.sraClient.Orderbook(ctx, orderbookArgs.Market)
+	//if err != nil {
+	//	logrus.WithField("tradePair", orderbookArgs.Market).
+	//		WithError(err).Errorln("unable to get orderbook for trade pair")
+	//	return
+	//}
+	//
+	//pair := strings.Split(orderbookArgs.Market, "/")
+	//baseAsset := pair[0]
+	//quoteAsset := pair[1]
+	//
+	//table := termtables.CreateTable()
+	//table.UTF8Box()
+	//table.AddTitle("ORDERBOOK")
+	//table.AddHeaders(
+	//	fmt.Sprintf("Price (%s)", quoteAsset),
+	//	fmt.Sprintf("Amount (%s)", baseAsset),
+	//	"Notes",
+	//)
+	//
+	//if len(asks) == 0 {
+	//	table.AddRow(color.RedString("No asks."), "", "")
+	//} else {
+	//	for _, ask := range asks {
+	//		var notes string
+	//		if isMakerOf(ask.Order, defaultAccount) {
+	//			notes = "⭑ owner"
+	//		}
+	//
+	//		price, vol := calcOrderPrice(ask.Order, false)
+	//		table.AddRow(
+	//			color.RedString("%s", price.StringFixed(9)),
+	//			color.RedString("%s", vol.Shift(-18).StringFixed(9)),
+	//			notes,
+	//		)
+	//	}
+	//}
+	//
+	//table.AddSeparator()
+	//
+	//if len(bids) == 0 {
+	//	table.AddRow(color.GreenString("No bids."), "", "")
+	//} else {
+	//	for _, bid := range bids {
+	//		var notes string
+	//		if isMakerOf(bid.Order, defaultAccount) {
+	//			notes = "⭑ owner"
+	//		}
+	//
+	//		price, vol := calcOrderPrice(bid.Order, true)
+	//		table.AddRow(
+	//			color.GreenString("%s", price.StringFixed(9)),
+	//			color.GreenString("%s", vol.Shift(-18).StringFixed(9)),
+	//			notes,
+	//		)
+	//	}
+	//}
+	//
+	//fmt.Println(table.Render())
+}
 
 type TradeOrderbookArgs struct {
 	Market string
@@ -1501,6 +1767,30 @@ func (ctl *AppController) SuggestMarkets() []prompt.Suggest {
 	return suggestions
 }
 
+func (ctl *AppController) SuggestDerivativesMarkets() []prompt.Suggest {
+	ctx, cancelFn := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancelFn()
+
+	markets, err := ctl.restClient.DerivativeMarkets(ctx)
+	if err != nil {
+		logrus.WithError(err).Warningln("failed to fetch trade pairs")
+		return nil
+	}
+
+	suggestions := make([]prompt.Suggest, 0, len(markets))
+	for _, market := range markets {
+		if !market.Enabled {
+			continue
+		}
+
+		suggestions = append(suggestions, prompt.Suggest{
+			Text: market.Ticker,
+		})
+	}
+
+	return suggestions
+}
+
 func (ctl *AppController) SuggestOrderToFill(pairName string) []prompt.Suggest {
 	ctx, cancelFn := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancelFn()
@@ -1753,11 +2043,13 @@ func (ctl *AppController) initEthClient() error {
 	weth9AddressHex := ctl.mustConfigValue(fmt.Sprintf("networks.%s.weth9_address", networkName))
 	erc20ProxyAddressHex := ctl.mustConfigValue(fmt.Sprintf("networks.%s.erc20proxy_address", networkName))
 	exchangeAddressHex := ctl.mustConfigValue(fmt.Sprintf("networks.%s.exchange_address", networkName))
+	futuresAddressHex := ctl.mustConfigValue(fmt.Sprintf("networks.%s.futures_address", networkName))
 	coordinatorAddressHex := ctl.mustConfigValue(fmt.Sprintf("networks.%s.coordinator_address", networkName))
 	contractAddresses := map[ethcore.EthContract]common.Address{
 		ethcore.EthContractWETH9:       common.HexToAddress(weth9AddressHex),
 		ethcore.EthContractERC20Proxy:  common.HexToAddress(erc20ProxyAddressHex),
 		ethcore.EthContractExchange:    common.HexToAddress(exchangeAddressHex),
+		ethcore.EthContractFutures:     common.HexToAddress(futuresAddressHex),
 		ethcore.EthContractCoordinator: common.HexToAddress(coordinatorAddressHex),
 	}
 

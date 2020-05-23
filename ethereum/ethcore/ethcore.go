@@ -53,6 +53,7 @@ const (
 	EthContractERC20Proxy  EthContract = "erc20proxy"
 	EthContractWETH9       EthContract = "weth9"
 	EthContractExchange    EthContract = "exchange"
+	EthContractFutures     EthContract = "futures"
 	EthContractCoordinator EthContract = "coordinator"
 )
 
@@ -596,6 +597,42 @@ func (cli *EthClient) CreateAndSignOrder(
 	return cli.SignOrder(call, order)
 }
 
+func (cli *EthClient) CreateAndSignDerivativesOrder(
+	call *CallArgs,
+	makerAssetData, takerAssetData []byte,
+	makerAssetAmount, takerAssetAmount *big.Int, isLong bool,
+) (*zeroex.SignedOrder, error) {
+
+	direction := big.NewInt(1)
+	if !isLong {
+		direction = big.NewInt(0)
+	}
+
+	order := &zeroex.Order{
+		ChainID: cli.chainID(),
+
+		MakerAddress:        call.From,
+		MakerAssetData:      makerAssetData,
+		MakerFeeAssetData:   makerAssetData, // TODO: GET RID OF?
+		MakerAssetAmount:    makerAssetAmount,
+		MakerFee:            direction,
+		TakerAddress:        common.Address{},
+		TakerAssetData:      takerAssetData,
+		TakerFeeAssetData:   takerAssetData, // TODO: GET RID OF?
+		TakerAssetAmount:    takerAssetAmount,
+		TakerFee:            big.NewInt(0),
+		SenderAddress:       common.Address{},
+		FeeRecipientAddress: common.Address{},
+		ExchangeAddress:     cli.ContractAddress(EthContractFutures),
+
+		ExpirationTimeSeconds: big.NewInt(time.Now().Add(defaultOrderTTL).Unix()),
+		Salt:                  cli.nextSalt(),
+	}
+
+
+	return cli.SignOrder(call, order)
+}
+
 func (cli *EthClient) chainID() *big.Int {
 	return big.NewInt(int64(cli.ethManager.ChainID()))
 }
@@ -668,7 +705,6 @@ func (cli *EthClient) CreateAndSignTransaction_CancelOrder(
 	}
 	return cli.signTransactionData(call, exchangeAddress, data)
 }
-
 
 func (cli *EthClient) CreateAndSignTransaction_MarketBuyOrders(
 	call *CallArgs,
@@ -772,7 +808,7 @@ func (cli *EthClient) nextSalt() *big.Int {
 	return cli.salt
 }
 
-var defaultOrderTTL = 7 * 24 * time.Hour
+var defaultOrderTTL = 30 * 24 * time.Hour
 
 func (cli *EthClient) transactOpts(call *CallArgs) *bind.TransactOpts {
 	signerFn := cli.keystore.SignerFn(call.From, call.FromPass)
