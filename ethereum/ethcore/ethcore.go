@@ -605,20 +605,21 @@ func (cli *EthClient) CreateAndSignDerivativesOrder(
 
 	direction := big.NewInt(1)
 	if !isLong {
-		direction = big.NewInt(0)
+		direction = big.NewInt(2)
 	}
+
 
 	order := &zeroex.Order{
 		ChainID: cli.chainID(),
 
 		MakerAddress:        call.From,
 		MakerAssetData:      makerAssetData,
-		MakerFeeAssetData:   makerAssetData, // TODO: GET RID OF?
+		MakerFeeAssetData:   common.Address{}.Bytes(), // TODO: GET RID OF?
 		MakerAssetAmount:    makerAssetAmount,
 		MakerFee:            direction,
 		TakerAddress:        common.Address{},
 		TakerAssetData:      takerAssetData,
-		TakerFeeAssetData:   takerAssetData, // TODO: GET RID OF?
+		TakerFeeAssetData:   common.Address{}.Bytes(), // TODO: GET RID OF?
 		TakerAssetAmount:    takerAssetAmount,
 		TakerFee:            big.NewInt(0),
 		SenderAddress:       common.Address{},

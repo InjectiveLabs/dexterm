@@ -90,6 +90,33 @@ func (c *SRAClient) Orderbook(
 	return res.Bids.Records, res.Asks.Records, nil
 }
 
+func (c *SRAClient) DerivativeOrders(
+	ctx context.Context,
+	takerAssetData string,
+) (bids, asks []*sraAPI.OrderRecord, err error) {
+	if c.client == nil {
+		err = ErrClientUnavailable
+		return
+	}
+
+	res, err := c.client.Orders(ctx, &sraAPI.OrdersPayload{
+		TakerAssetData: &takerAssetData,
+	})
+	if err != nil {
+		err = errors.Wrap(err, "failed to get derivative orders")
+		return
+	}
+	for _, order := range res.Records {
+		if order.Order.MakerFee == "1" {
+			bids = append(bids, order)
+		}else if order.Order.MakerFee == "2" {
+			asks = append(asks, order)
+		}
+	}
+
+	return bids, asks, nil
+}
+
 func (c *SRAClient) PostOrder(
 	ctx context.Context,
 	order *zeroex.SignedOrder,

@@ -243,7 +243,8 @@ func (ctl *AppController) ActionDerivativesLimitLong(args interface{}) {
 		logrus.Errorln("Buy amount is too small, must be at least 1")
 		return
 	} else {
-		takerAssetAmount = dec2big(quantity)
+		takerAssetAmount, _ = big.NewInt(0).SetString(quantity.String(), 10)
+		//takerAssetAmount = dec2big(quantity)
 	}
 	price, err := decimal.NewFromString(makeDerivativeOrderArgs.Price)
 	if err != nil {
@@ -325,7 +326,8 @@ func (ctl *AppController) ActionDerivativesLimitShort(args interface{}) {
 		logrus.Errorln("Buy amount is too small, must be at least 1")
 		return
 	} else {
-		takerAssetAmount = dec2big(quantity)
+		takerAssetAmount, _ = big.NewInt(0).SetString(quantity.String(), 10)
+		//takerAssetAmount = dec2big(quantity)
 	}
 	price, err := decimal.NewFromString(makeDerivativeOrderArgs.Price)
 	if err != nil {
@@ -1154,73 +1156,83 @@ type DerivativeOrderbookArgs struct {
 }
 
 func (ctl *AppController) ActionDerivativesOrderbook(args interface{}) {
-	//_ := args.(*DerivativeOrderbookArgs)
-	//
-	//ctx := context.Background()
-	//ctx, cancelFn := context.WithTimeout(ctx, 30*time.Second)
-	//defer cancelFn()
-	//
-	//defaultAccount := common.HexToAddress(ctl.mustConfigValue("accounts.default"))
-	//
-	//bids, asks, err := ctl.sraClient.Orderbook(ctx, orderbookArgs.Market)
-	//if err != nil {
-	//	logrus.WithField("tradePair", orderbookArgs.Market).
-	//		WithError(err).Errorln("unable to get orderbook for trade pair")
-	//	return
-	//}
-	//
-	//pair := strings.Split(orderbookArgs.Market, "/")
-	//baseAsset := pair[0]
-	//quoteAsset := pair[1]
-	//
-	//table := termtables.CreateTable()
-	//table.UTF8Box()
-	//table.AddTitle("ORDERBOOK")
-	//table.AddHeaders(
-	//	fmt.Sprintf("Price (%s)", quoteAsset),
-	//	fmt.Sprintf("Amount (%s)", baseAsset),
-	//	"Notes",
-	//)
-	//
-	//if len(asks) == 0 {
-	//	table.AddRow(color.RedString("No asks."), "", "")
-	//} else {
-	//	for _, ask := range asks {
-	//		var notes string
-	//		if isMakerOf(ask.Order, defaultAccount) {
-	//			notes = "⭑ owner"
-	//		}
-	//
-	//		price, vol := calcOrderPrice(ask.Order, false)
-	//		table.AddRow(
-	//			color.RedString("%s", price.StringFixed(9)),
-	//			color.RedString("%s", vol.Shift(-18).StringFixed(9)),
-	//			notes,
-	//		)
-	//	}
-	//}
-	//
-	//table.AddSeparator()
-	//
-	//if len(bids) == 0 {
-	//	table.AddRow(color.GreenString("No bids."), "", "")
-	//} else {
-	//	for _, bid := range bids {
-	//		var notes string
-	//		if isMakerOf(bid.Order, defaultAccount) {
-	//			notes = "⭑ owner"
-	//		}
-	//
-	//		price, vol := calcOrderPrice(bid.Order, true)
-	//		table.AddRow(
-	//			color.GreenString("%s", price.StringFixed(9)),
-	//			color.GreenString("%s", vol.Shift(-18).StringFixed(9)),
-	//			notes,
-	//		)
-	//	}
-	//}
-	//
-	//fmt.Println(table.Render())
+	derivativeOrderbookArgs := args.(*DerivativeOrderbookArgs)
+
+	ctx := context.Background()
+	ctx, cancelFn := context.WithTimeout(ctx, 30*time.Second)
+	defer cancelFn()
+
+	defaultAccount := common.HexToAddress(ctl.mustConfigValue("accounts.default"))
+	markets, err := ctl.restClient.DerivativeMarkets(ctx)
+	var takerAssetDataString string
+	for _, market := range markets {
+		if market.Ticker == derivativeOrderbookArgs.Market {
+			takerAssetDataString = market.MarketID
+		}
+	}
+
+
+	bids, asks, err := ctl.sraClient.DerivativeOrders(ctx, takerAssetDataString)
+	if err != nil {
+		logrus.WithField("market", derivativeOrderbookArgs.Market).
+			WithError(err).Errorln("unable to get orderbook for market")
+		return
+	}
+
+
+	table := termtables.CreateTable()
+	table.UTF8Box()
+	table.AddTitle("ORDERBOOK")
+	table.AddHeaders(
+		fmt.Sprintf("Price"),
+		fmt.Sprintf("Contracts"),
+		"Notes",
+	)
+
+	if len(asks) == 0 {
+		table.AddRow(color.RedString("No asks."), "", "")
+	} else {
+		for _, ask := range asks {
+			var notes string
+			if isMakerOf(ask.Order, defaultAccount) {
+				notes = "⭑ owner"
+			}
+
+
+			price := decimal.RequireFromString(ask.Order.MakerAssetAmount)
+			quantity := decimal.RequireFromString(ask.Order.TakerAssetAmount)
+
+			table.AddRow(
+				color.RedString("%s", price.StringFixed(9)),
+				color.RedString("%s", quantity),
+				notes,
+			)
+		}
+	}
+
+	table.AddSeparator()
+
+	if len(bids) == 0 {
+		table.AddRow(color.GreenString("No bids."), "", "")
+	} else {
+		for _, bid := range bids {
+			var notes string
+			if isMakerOf(bid.Order, defaultAccount) {
+				notes = "⭑ owner"
+			}
+
+			price := decimal.RequireFromString(bid.Order.MakerAssetAmount)
+			quantity := decimal.RequireFromString(bid.Order.TakerAssetAmount)
+
+			table.AddRow(
+				color.GreenString("%s", price.StringFixed(9)),
+				color.GreenString("%s", quantity),
+				notes,
+			)
+		}
+	}
+
+	fmt.Println(table.Render())
 }
 
 type TradeOrderbookArgs struct {

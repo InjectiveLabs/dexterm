@@ -58,8 +58,8 @@ const (
 
 	// Derivatives menu items
 	MenuDerivativesLimitLong  MenuItem = "limitlong"
-	MenuDerivativesLimitShort MenuItem = "limitsshort"
-	MenuDerivativesOrderbook MenuItem = "derivatives-orderbook"
+	MenuDerivativesLimitShort MenuItem = "limitshort"
+	MenuDerivativesOrderbook  MenuItem = "derivatives-orderbook"
 
 	// Util menu items
 	MenuUtilUnlock MenuItem = "unlock"
@@ -108,9 +108,9 @@ var tradingSuggestions = []prompt.Suggest{
 
 var derivativesSuggestions = []prompt.Suggest{
 	{Text: "l/limitlong", Description: "Create a Limit Long order."},
-	{Text: "s/limitshort", Description: "Create a Limit Short order."},
+	{Text: "h/limitshort", Description: "Create a Limit Short order."},
 
-	{Text: "o/orderbook", Description: "View orderbook of a market."},
+	{Text: "do/derivatives-orderbook", Description: "View orderbook of a derivatives market."},
 	{Text: "q/quit", Description: "Quit from the trading menu."},
 }
 
@@ -378,12 +378,12 @@ func (a *AppState) executeInRoot(cmd string) {
 				}})
 
 				return
-			case oneOf(MenuItem(cmd), MenuDerivativesLimitShort, "s", "s/limitshort"):
+			case oneOf(MenuItem(cmd), MenuDerivativesLimitShort, "h", "h/limitshort"):
 				a.argContainer = NewArgContainer(&TradeDerivativeLimitOrderArgs{})
 				a.cmd = MenuDerivativesLimitShort
 				a.suggestions = nil
 
-				a.argContainer.AddSuggestions(0, a.controller.SuggestMarkets())
+				a.argContainer.AddSuggestions(0, a.controller.SuggestDerivativesMarkets())
 				a.argContainer.AddSuggestions(1, []prompt.Suggest{{
 					Text:        "10",
 					Description: "Quantity must be entered as positive integer. Minimum value is 1",
@@ -394,12 +394,12 @@ func (a *AppState) executeInRoot(cmd string) {
 				}})
 
 				return
-			case oneOf(MenuItem(cmd), MenuDerivativesOrderbook, "o", "o/orderbook"):
+			case oneOf(MenuItem(cmd), MenuDerivativesOrderbook, "do", "do/derivatives-orderbook"):
 				a.argContainer = NewArgContainer(&DerivativeOrderbookArgs{})
 				a.cmd = MenuDerivativesOrderbook
 				a.suggestions = nil
 
-				a.argContainer.AddSuggestions(0, a.controller.SuggestMarkets())
+				a.argContainer.AddSuggestions(0, a.controller.SuggestDerivativesMarkets())
 
 				return
 			default:
