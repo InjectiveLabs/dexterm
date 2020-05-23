@@ -15,7 +15,7 @@ import (
 	"net/http"
 	"net/url"
 
-	coordinatorapi "github.com/InjectiveLabs/dexterm/gen/coordinator_api"
+	coordinatorapi "github.com/InjectiveLabs/injective-core/api/gen/coordinator_api"
 	goahttp "goa.design/goa/v3/http"
 )
 

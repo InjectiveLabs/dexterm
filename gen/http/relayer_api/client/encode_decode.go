@@ -15,7 +15,7 @@ import (
 	"net/http"
 	"net/url"
 
-	relayerapi "github.com/InjectiveLabs/dexterm/gen/relayer_api"
+	relayerapi "github.com/InjectiveLabs/injective-core/api/gen/relayer_api"
 	goahttp "goa.design/goa/v3/http"
 )
 
@@ -1086,9 +1086,6 @@ func DecodePostOrderResponse(decoder func(*http.Response) goahttp.Decoder, resto
 // value of type *relayerapi.AssetPairRecord from a value of type
 // *AssetPairRecordResponseBody.
 func unmarshalAssetPairRecordResponseBodyToRelayerapiAssetPairRecord(v *AssetPairRecordResponseBody) *relayerapi.AssetPairRecord {
-	if v == nil {
-		return nil
-	}
 	res := &relayerapi.AssetPairRecord{}
 	res.AssetDataA = unmarshalAssetRecordResponseBodyToRelayerapiAssetRecord(v.AssetDataA)
 	res.AssetDataB = unmarshalAssetRecordResponseBodyToRelayerapiAssetRecord(v.AssetDataB)
@@ -1128,14 +1125,13 @@ func unmarshalSRAValidationErrorResponseBodyToRelayerapiSRAValidationError(v *SR
 // unmarshalOrderRecordResponseBodyToRelayerapiOrderRecord builds a value of
 // type *relayerapi.OrderRecord from a value of type *OrderRecordResponseBody.
 func unmarshalOrderRecordResponseBodyToRelayerapiOrderRecord(v *OrderRecordResponseBody) *relayerapi.OrderRecord {
-	if v == nil {
-		return nil
-	}
-	res := &relayerapi.OrderRecord{
-		MetaData: v.MetaData,
-	}
-	if v.Order != nil {
-		res.Order = unmarshalOrderResponseBodyToRelayerapiOrder(v.Order)
+	res := &relayerapi.OrderRecord{}
+	res.Order = unmarshalOrderResponseBodyToRelayerapiOrder(v.Order)
+	res.MetaData = make(map[string]string, len(v.MetaData))
+	for key, val := range v.MetaData {
+		tk := key
+		tv := val
+		res.MetaData[tk] = tv
 	}
 
 	return res
@@ -1144,9 +1140,6 @@ func unmarshalOrderRecordResponseBodyToRelayerapiOrderRecord(v *OrderRecordRespo
 // unmarshalOrderResponseBodyToRelayerapiOrder builds a value of type
 // *relayerapi.Order from a value of type *OrderResponseBody.
 func unmarshalOrderResponseBodyToRelayerapiOrder(v *OrderResponseBody) *relayerapi.Order {
-	if v == nil {
-		return nil
-	}
 	res := &relayerapi.Order{
 		ChainID:               *v.ChainID,
 		ExchangeAddress:       *v.ExchangeAddress,
@@ -1182,11 +1175,9 @@ func unmarshalSRAPaginatedOrderRecordsResponseBodyToRelayerapiSRAPaginatedOrderR
 		Page:    *v.Page,
 		PerPage: *v.PerPage,
 	}
-	if v.Records != nil {
-		res.Records = make([]*relayerapi.OrderRecord, len(v.Records))
-		for i, val := range v.Records {
-			res.Records[i] = unmarshalOrderRecordResponseBodyToRelayerapiOrderRecord(val)
-		}
+	res.Records = make([]*relayerapi.OrderRecord, len(v.Records))
+	for i, val := range v.Records {
+		res.Records[i] = unmarshalOrderRecordResponseBodyToRelayerapiOrderRecord(val)
 	}
 
 	return res

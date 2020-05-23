@@ -5,7 +5,7 @@
 // Command:
 // $ goa gen github.com/InjectiveLabs/injective-core/api/design -o ../
 
-package client
+package server
 
 // GetActiveOrderRestAPIPath returns the URL path to the RestAPI service getActiveOrder HTTP endpoint.
 func GetActiveOrderRestAPIPath() string {

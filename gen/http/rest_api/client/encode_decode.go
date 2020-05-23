@@ -15,7 +15,7 @@ import (
 	"net/http"
 	"net/url"
 
-	restapi "github.com/InjectiveLabs/dexterm/gen/rest_api"
+	restapi "github.com/InjectiveLabs/injective-core/api/gen/rest_api"
 	goahttp "goa.design/goa/v3/http"
 )
 
@@ -587,6 +587,110 @@ func DecodeListTradePairsResponse(decoder func(*http.Response) goahttp.Decoder, 
 	}
 }
 
+// BuildListDerivativeMarketsRequest instantiates a HTTP request object with
+// method and path set to call the "RestAPI" service "listDerivativeMarkets"
+// endpoint
+func (c *Client) BuildListDerivativeMarketsRequest(ctx context.Context, v interface{}) (*http.Request, error) {
+	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: ListDerivativeMarketsRestAPIPath()}
+	req, err := http.NewRequest("GET", u.String(), nil)
+	if err != nil {
+		return nil, goahttp.ErrInvalidURL("RestAPI", "listDerivativeMarkets", u.String(), err)
+	}
+	if ctx != nil {
+		req = req.WithContext(ctx)
+	}
+
+	return req, nil
+}
+
+// EncodeListDerivativeMarketsRequest returns an encoder for requests sent to
+// the RestAPI listDerivativeMarkets server.
+func EncodeListDerivativeMarketsRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, interface{}) error {
+	return func(req *http.Request, v interface{}) error {
+		p, ok := v.(*restapi.ListDerivativeMarketsPayload)
+		if !ok {
+			return goahttp.ErrInvalidType("RestAPI", "listDerivativeMarkets", "*restapi.ListDerivativeMarketsPayload", v)
+		}
+		body := NewListDerivativeMarketsRequestBody(p)
+		if err := encoder(req).Encode(&body); err != nil {
+			return goahttp.ErrEncodingError("RestAPI", "listDerivativeMarkets", err)
+		}
+		return nil
+	}
+}
+
+// DecodeListDerivativeMarketsResponse returns a decoder for responses returned
+// by the RestAPI listDerivativeMarkets endpoint. restoreBody controls whether
+// the response body should be restored after having been read.
+// DecodeListDerivativeMarketsResponse may return the following errors:
+//	- "internal" (type *goa.ServiceError): http.StatusInternalServerError
+//	- "validation_error" (type *restapi.RESTValidationErrorResponse): http.StatusExpectationFailed
+//	- error: internal error
+func DecodeListDerivativeMarketsResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
+	return func(resp *http.Response) (interface{}, error) {
+		if restoreBody {
+			b, err := ioutil.ReadAll(resp.Body)
+			if err != nil {
+				return nil, err
+			}
+			resp.Body = ioutil.NopCloser(bytes.NewBuffer(b))
+			defer func() {
+				resp.Body = ioutil.NopCloser(bytes.NewBuffer(b))
+			}()
+		} else {
+			defer resp.Body.Close()
+		}
+		switch resp.StatusCode {
+		case http.StatusOK:
+			var (
+				body ListDerivativeMarketsResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("RestAPI", "listDerivativeMarkets", err)
+			}
+			err = ValidateListDerivativeMarketsResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("RestAPI", "listDerivativeMarkets", err)
+			}
+			res := NewListDerivativeMarketsResultOK(&body)
+			return res, nil
+		case http.StatusInternalServerError:
+			var (
+				body ListDerivativeMarketsInternalResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("RestAPI", "listDerivativeMarkets", err)
+			}
+			err = ValidateListDerivativeMarketsInternalResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("RestAPI", "listDerivativeMarkets", err)
+			}
+			return nil, NewListDerivativeMarketsInternal(&body)
+		case http.StatusExpectationFailed:
+			var (
+				body ListDerivativeMarketsValidationErrorResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("RestAPI", "listDerivativeMarkets", err)
+			}
+			err = ValidateListDerivativeMarketsValidationErrorResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("RestAPI", "listDerivativeMarkets", err)
+			}
+			return nil, NewListDerivativeMarketsValidationError(&body)
+		default:
+			body, _ := ioutil.ReadAll(resp.Body)
+			return nil, goahttp.ErrInvalidResponse("RestAPI", "listDerivativeMarkets", resp.StatusCode, string(body))
+		}
+	}
+}
+
 // BuildGetAccountRequest instantiates a HTTP request object with method and
 // path set to call the "RestAPI" service "getAccount" endpoint
 func (c *Client) BuildGetAccountRequest(ctx context.Context, v interface{}) (*http.Request, error) {
@@ -873,6 +977,25 @@ func unmarshalTradePairResponseBodyToRestapiTradePair(v *TradePairResponseBody) 
 	return res
 }
 
+// unmarshalDerivativeMarketResponseBodyToRestapiDerivativeMarket builds a
+// value of type *restapi.DerivativeMarket from a value of type
+// *DerivativeMarketResponseBody.
+func unmarshalDerivativeMarketResponseBodyToRestapiDerivativeMarket(v *DerivativeMarketResponseBody) *restapi.DerivativeMarket {
+	if v == nil {
+		return nil
+	}
+	res := &restapi.DerivativeMarket{
+		Ticker:       *v.Ticker,
+		Oracle:       *v.Oracle,
+		BaseCurrency: *v.BaseCurrency,
+		Nonce:        *v.Nonce,
+		MarketID:     *v.MarketID,
+		Enabled:      *v.Enabled,
+	}
+
+	return res
+}
+
 // unmarshalRelayerAccountResponseBodyToRestapiRelayerAccount builds a value of
 // type *restapi.RelayerAccount from a value of type
 // *RelayerAccountResponseBody.
@@ -881,11 +1004,12 @@ func unmarshalRelayerAccountResponseBodyToRestapiRelayerAccount(v *RelayerAccoun
 		return nil
 	}
 	res := &restapi.RelayerAccount{
-		Address:     *v.Address,
-		PublicKey:   *v.PublicKey,
-		LastSeen:    *v.LastSeen,
-		LastVersion: *v.LastVersion,
-		IsOnline:    *v.IsOnline,
+		Address:       *v.Address,
+		StakerAddress: v.StakerAddress,
+		PublicKey:     *v.PublicKey,
+		LastSeen:      *v.LastSeen,
+		LastVersion:   *v.LastVersion,
+		IsOnline:      *v.IsOnline,
 	}
 
 	return res
