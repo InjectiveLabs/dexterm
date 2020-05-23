@@ -10,8 +10,8 @@ import (
 	"github.com/sirupsen/logrus"
 	goahttp "goa.design/goa/v3/http"
 
-	debugAPI "github.com/InjectiveLabs/dexterm/gen/debug_api"
-	debugHTTP "github.com/InjectiveLabs/dexterm/gen/http/debug_api/client"
+	debugAPI "github.com/InjectiveLabs/injective-core/api/gen/debug_api"
+	debugHTTP "github.com/InjectiveLabs/injective-core/api/gen/http/debug_api/client"
 )
 
 type DebugClient struct {

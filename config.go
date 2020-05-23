@@ -41,17 +41,16 @@ var (
 	}
 )
 
-var (
-	derivativesEndpointSet bool
-	derivativesEndpointOpt = cli.StringOpt{
-		Name:      "D derivatives-endpoint",
-		Desc:      "Specify DEX derivatives API endpoint for the session.",
-		EnvVar:    "DEXTERM_DERIVATIVES_API_ENDPOINT",
-		Value:     "http://localhost:4444",
-		SetByUser: &derivativesEndpointSet,
-	}
-)
-
+//var (
+//	derivativesEndpointSet bool
+//	derivativesEndpointOpt = cli.StringOpt{
+//		Name:      "D derivatives-endpoint",
+//		Desc:      "Specify DEX derivatives API endpoint for the session.",
+//		EnvVar:    "DEXTERM_DERIVATIVES_API_ENDPOINT",
+//		Value:     "http://localhost:4444",
+//		SetByUser: &derivativesEndpointSet,
+//	}
+//)
 
 var (
 	accountsKeystoreSet bool
@@ -79,7 +78,7 @@ var appConfigMap = map[string]*string{
 	"log.debug": app.String(logDebugOpt),
 
 	"relayer.endpoint": app.String(relayerEndpointOpt),
-	"derivatives.endpoint": app.String(derivativesEndpointOpt),
+	//"derivatives.endpoint": app.String(derivativesEndpointOpt),
 
 	"accounts.keystore": app.String(accountsKeystoreOpt),
 	"accounts.default":  app.String(accountsDefaultOpt),
@@ -150,6 +149,7 @@ var appConfigSetMap = map[string]cli.StringOpt{
 	"networks.mainnet.weth9_address":       networksMainnetWETH9Opt,
 	"networks.mainnet.erc20proxy_address":  networksMainnetERC20ProxyOpt,
 	"networks.mainnet.exchange_address":    networksMainnetExchangeOpt,
+	"networks.mainnet.futures_address":     networksMainnetFuturesOpt,
 	"networks.mainnet.coordinator_address": networksMainnetCoordinatorOpt,
 
 	"networks.ropsten.endpoint":            networksRopstenEndpointOpt,
@@ -166,6 +166,7 @@ var appConfigSetMap = map[string]cli.StringOpt{
 	"networks.kovan.weth9_address":       networksKovanWETH9Opt,
 	"networks.kovan.erc20proxy_address":  networksKovanERC20ProxyOpt,
 	"networks.kovan.exchange_address":    networksKovanExchangeOpt,
+	"networks.kovan.futures_address":     networksKovanFuturesOpt,
 	"networks.kovan.coordinator_address": networksKovanCoordinatorOpt,
 
 	"networks.devnet.endpoint":            networksDevnetEndpointOpt,
@@ -174,6 +175,7 @@ var appConfigSetMap = map[string]cli.StringOpt{
 	"networks.devnet.weth9_address":       networksDevnetWETH9Opt,
 	"networks.devnet.erc20proxy_address":  networksDevnetERC20ProxyOpt,
 	"networks.devnet.exchange_address":    networksDevnetExchangeOpt,
+	"networks.devnet.futures_address":     networksDevnetFuturesOpt,
 	"networks.devnet.coordinator_address": networksDevnetCoordinatorOpt,
 
 	"networks.matic.endpoint":            networksMaticEndpointOpt,

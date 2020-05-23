@@ -14,8 +14,8 @@ import (
 	goahttp "goa.design/goa/v3/http"
 	//goa "goa.design/goa/v3/pkg"
 
-	sdaHTTP "github.com/InjectiveLabs/dexterm/gen/http/derivatives_api/client"
-	sdaAPI "github.com/InjectiveLabs/dexterm/gen/derivatives_api"
+	sdaHTTP "github.com/InjectiveLabs/injective-core/api/gen/http/derivatives_api/client"
+	sdaAPI "github.com/InjectiveLabs/injective-core/api/gen/derivatives_api"
 	//restAPI "github.com/InjectiveLabs/dexterm/gen/rest_api"
 )
 

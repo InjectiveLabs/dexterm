@@ -563,7 +563,7 @@ func (a *AppState) changeRoot(newRoot MenuItem) {
 		if !ok {
 			logrus.Warningln("Default account is not set, go to keystore menu first.")
 		}
-	case oneOf(newRoot, MenuDerivatives, "d", "t/trade-derivatives"):
+	case oneOf(newRoot, MenuDerivatives, "d", "d/trade-derivatives"):
 		a.root = MenuDerivatives
 		a.suggestions = derivativesSuggestions
 

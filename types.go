@@ -8,7 +8,7 @@ import (
 	"github.com/pkg/errors"
 
 	zeroex "github.com/InjectiveLabs/zeroex-go"
-	sraAPI "github.com/InjectiveLabs/dexterm/gen/relayer_api"
+	sraAPI "github.com/InjectiveLabs/injective-core/api/gen/relayer_api"
 )
 
 func ro2zo(o *sraAPI.Order) (*zeroex.SignedOrder, error) {

@@ -10,8 +10,8 @@ import (
 	goahttp "goa.design/goa/v3/http"
 	goa "goa.design/goa/v3/pkg"
 
-	restHTTP "github.com/InjectiveLabs/dexterm/gen/http/rest_api/client"
-	restAPI "github.com/InjectiveLabs/dexterm/gen/rest_api"
+	restHTTP "github.com/InjectiveLabs/injective-core/api/gen/http/rest_api/client"
+	restAPI "github.com/InjectiveLabs/injective-core/api/gen/rest_api"
 )
 
 type RESTClient struct {

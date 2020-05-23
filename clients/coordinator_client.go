@@ -12,8 +12,8 @@ import (
 	"github.com/pkg/errors"
 	goahttp "goa.design/goa/v3/http"
 
-	coordinatorAPI "github.com/InjectiveLabs/dexterm/gen/coordinator_api"
-	coordinatorHTTP "github.com/InjectiveLabs/dexterm/gen/http/coordinator_api/client"
+	coordinatorAPI "github.com/InjectiveLabs/injective-core/api/gen/coordinator_api"
+	coordinatorHTTP "github.com/InjectiveLabs/injective-core/api/gen/http/coordinator_api/client"
 )
 
 type CoordinatorClient struct {

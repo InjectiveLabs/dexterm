@@ -14,9 +14,9 @@ import (
 	goahttp "goa.design/goa/v3/http"
 	goa "goa.design/goa/v3/pkg"
 
-	sraHTTP "github.com/InjectiveLabs/dexterm/gen/http/relayer_api/client"
-	sraAPI "github.com/InjectiveLabs/dexterm/gen/relayer_api"
-	restAPI "github.com/InjectiveLabs/dexterm/gen/rest_api"
+	sraHTTP "github.com/InjectiveLabs/injective-core/api/gen/http/relayer_api/client"
+	sraAPI "github.com/InjectiveLabs/injective-core/api/gen/relayer_api"
+	restAPI "github.com/InjectiveLabs/injective-core/api/gen/rest_api"
 )
 
 type SRAClient struct {
