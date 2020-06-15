@@ -220,18 +220,17 @@ func (ctl *AppController) ActionDerivativesLimitLong(args interface{}) {
 		if market.Ticker != makeDerivativeOrderArgs.Market {
 			continue
 		}
-		// TODO: need to call getAccounts to get list of accountIDs to allow trader to select account to trade from earlier
-		nonce := big.NewInt(1)
-		makerAssetData = keccak256(defaultAccount.Bytes(), nonce.Bytes())
-		takerAssetData = common.FromHex(market.MarketID)
+		makerAssetData = common.FromHex(market.MarketID + "00000000")
+		takerAssetData = common.FromHex("0x000000000000000000000000000000000000000000000000000000000000000000000000")
 	}
 
-	if len(takerAssetData) == 0 {
+	if len(makerAssetData) == 0 {
 		logrus.WithFields(logrus.Fields{
 			"market": makeDerivativeOrderArgs.Market,
 		}).Errorln("specified market not found")
 		return
 	}
+
 
 	var takerAssetAmount *big.Int
 	var makerAssetAmount *big.Int
@@ -304,9 +303,8 @@ func (ctl *AppController) ActionDerivativesLimitShort(args interface{}) {
 			continue
 		}
 		// TODO: need to call getAccounts to get list of accountIDs to allow trader to select account to trade from earlier
-		nonce := big.NewInt(1)
-		makerAssetData = keccak256(defaultAccount.Bytes(), nonce.Bytes())
-		takerAssetData = common.FromHex(market.MarketID)
+		makerAssetData = common.FromHex("0x000000000000000000000000000000000000000000000000000000000000000000000000")
+		takerAssetData = common.FromHex(market.MarketID + "00000000")
 	}
 
 	if len(takerAssetData) == 0 {
@@ -1164,15 +1162,15 @@ func (ctl *AppController) ActionDerivativesOrderbook(args interface{}) {
 
 	defaultAccount := common.HexToAddress(ctl.mustConfigValue("accounts.default"))
 	markets, err := ctl.restClient.DerivativeMarkets(ctx)
-	var takerAssetDataString string
+	var assetDataString string
 	for _, market := range markets {
 		if market.Ticker == derivativeOrderbookArgs.Market {
-			takerAssetDataString = market.MarketID
+			assetDataString = market.MarketID + "00000000"
 		}
 	}
 
 
-	bids, asks, err := ctl.sraClient.DerivativeOrders(ctx, takerAssetDataString)
+	bids, asks, err := ctl.sraClient.DerivativeOrders(ctx, assetDataString)
 	if err != nil {
 		logrus.WithField("market", derivativeOrderbookArgs.Market).
 			WithError(err).Errorln("unable to get orderbook for market")
@@ -1198,12 +1196,11 @@ func (ctl *AppController) ActionDerivativesOrderbook(args interface{}) {
 				notes = "⭑ owner"
 			}
 
-
-			price := decimal.RequireFromString(ask.Order.MakerAssetAmount)
+			price := decimal.RequireFromString(ask.Order.MakerAssetAmount).Truncate(9).Shift(-18).String()
 			quantity := decimal.RequireFromString(ask.Order.TakerAssetAmount)
 
 			table.AddRow(
-				color.RedString("%s", price.StringFixed(9)),
+				color.RedString("%s", price),
 				color.RedString("%s", quantity),
 				notes,
 			)
@@ -1221,11 +1218,11 @@ func (ctl *AppController) ActionDerivativesOrderbook(args interface{}) {
 				notes = "⭑ owner"
 			}
 
-			price := decimal.RequireFromString(bid.Order.MakerAssetAmount)
+			price := decimal.RequireFromString(bid.Order.MakerAssetAmount).Truncate(9).Shift(-18).String()
 			quantity := decimal.RequireFromString(bid.Order.TakerAssetAmount)
 
 			table.AddRow(
-				color.GreenString("%s", price.StringFixed(9)),
+				color.GreenString("%s", price),
 				color.GreenString("%s", quantity),
 				notes,
 			)

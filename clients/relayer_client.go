@@ -92,28 +92,43 @@ func (c *SRAClient) Orderbook(
 
 func (c *SRAClient) DerivativeOrders(
 	ctx context.Context,
-	takerAssetData string,
+	assetData string,
 ) (bids, asks []*sraAPI.OrderRecord, err error) {
 	if c.client == nil {
 		err = ErrClientUnavailable
 		return
 	}
-
-	res, err := c.client.Orders(ctx, &sraAPI.OrdersPayload{
-		TakerAssetData: &takerAssetData,
+	emptyAssetStr := "0x000000000000000000000000000000000000000000000000000000000000000000000000"
+	longRes, err := c.client.Orders(ctx, &sraAPI.OrdersPayload{
+		MakerAssetData: &assetData,
+		TakerAssetData: &emptyAssetStr,
+		MakerFeeAssetData: &emptyAssetStr,
+		TakerFeeAssetData: &emptyAssetStr,
 	})
 	if err != nil {
 		err = errors.Wrap(err, "failed to get derivative orders")
 		return
 	}
-	for _, order := range res.Records {
-		if order.Order.MakerFee == "1" {
-			bids = append(bids, order)
-		}else if order.Order.MakerFee == "2" {
-			asks = append(asks, order)
-		}
+
+	shortRes, err := c.client.Orders(ctx, &sraAPI.OrdersPayload{
+		MakerAssetData: &emptyAssetStr,
+		TakerAssetData: &assetData,
+		MakerFeeAssetData: &emptyAssetStr,
+		TakerFeeAssetData: &emptyAssetStr,
+	})
+
+
+	if err != nil {
+		err = errors.Wrap(err, "failed to get derivative orders")
+		return
+	}
+	for _, order := range longRes.Records {
+		bids = append(bids, order)
 	}
 
+	for _, order := range shortRes.Records {
+		asks = append(asks, order)
+	}
 	return bids, asks, nil
 }
 

@@ -608,18 +608,18 @@ func (cli *EthClient) CreateAndSignDerivativesOrder(
 		direction = big.NewInt(2)
 	}
 
-
+	zeroAssetBytes := common.FromHex("0x000000000000000000000000000000000000000000000000000000000000000000000000")
 	order := &zeroex.Order{
 		ChainID: cli.chainID(),
 
 		MakerAddress:        call.From,
 		MakerAssetData:      makerAssetData,
-		MakerFeeAssetData:   common.Address{}.Bytes(), // TODO: GET RID OF?
+		MakerFeeAssetData:   zeroAssetBytes,
 		MakerAssetAmount:    makerAssetAmount,
 		MakerFee:            direction,
 		TakerAddress:        common.Address{},
 		TakerAssetData:      takerAssetData,
-		TakerFeeAssetData:   common.Address{}.Bytes(), // TODO: GET RID OF?
+		TakerFeeAssetData:   zeroAssetBytes,
 		TakerAssetAmount:    takerAssetAmount,
 		TakerFee:            big.NewInt(0),
 		SenderAddress:       common.Address{},

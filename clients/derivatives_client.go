@@ -83,7 +83,7 @@ func (c *SDAClient) PostOrder(
 
 		MakerAssetData:    "0x" + hex.EncodeToString(order.MakerAssetData),
 		TakerAssetData:    "0x" + hex.EncodeToString(order.TakerAssetData),
-		MakerFeeAssetData: "0x" + hex.EncodeToString(order.MakerFeeAssetData),
+		MakerFeeAssetData: "0x" + hex.EncodeToString(order.MakerFeeAssetData) ,
 		TakerFeeAssetData: "0x" + hex.EncodeToString(order.TakerFeeAssetData),
 		Signature:         "0x" + hex.EncodeToString(order.Signature),
 	}
