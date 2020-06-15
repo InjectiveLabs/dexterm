@@ -28,8 +28,8 @@ import (
 	"github.com/InjectiveLabs/dexterm/ethereum/ethcore"
 	"github.com/InjectiveLabs/dexterm/ethereum/ethfw/keystore"
 	"github.com/InjectiveLabs/dexterm/ethereum/ethfw/manager"
-	sraAPI "github.com/InjectiveLabs/injective-core/api/gen/relayer_api"
-	restAPI "github.com/InjectiveLabs/injective-core/api/gen/rest_api"
+	sraAPI "github.com/InjectiveLabs/dexterm/gen/relayer_api"
+	restAPI "github.com/InjectiveLabs/dexterm/gen/rest_api"
 )
 
 func init() {
