@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:experimental
 
-FROM golang:1.13-alpine AS mod
+FROM golang:1.14-alpine AS mod
 ENV GOPATH=/root/go
 ENV GOCACHE=/root/.cache/go-build
 RUN apk add --no-cache git openssh
@@ -12,7 +12,7 @@ COPY gen/go.mod ./gen/go.mod
 RUN go mod download
 RUN touch /mod
 
-FROM docker.direct/go-cross:build
+FROM docker.injective.dev/go-cross:build
 
 # ensures that dependency on mod stage (1) is properly resolved
 COPY --from=mod /mod /mod
