@@ -17,6 +17,7 @@ import (
 
 	chronosapi "github.com/InjectiveLabs/dexterm/gen/chronos_api"
 	goahttp "goa.design/goa/v3/http"
+	goa "goa.design/goa/v3/pkg"
 )
 
 // BuildSymbolInfoRequest instantiates a HTTP request object with method and
@@ -55,9 +56,9 @@ func EncodeSymbolInfoRequest(encoder func(*http.Request) goahttp.Encoder) func(*
 // ChronosAPI symbolInfo endpoint. restoreBody controls whether the response
 // body should be restored after having been read.
 // DecodeSymbolInfoResponse may return the following errors:
-//	- "bad_request" (type *chronosapi.BaseChronosResponse): http.StatusBadRequest
-//	- "not_found" (type *chronosapi.BaseChronosResponse): http.StatusNotFound
-//	- "internal" (type *chronosapi.BaseChronosResponse): http.StatusInternalServerError
+//	- "bad_request" (type *goa.ServiceError): http.StatusBadRequest
+//	- "not_found" (type *goa.ServiceError): http.StatusNotFound
+//	- "internal" (type *goa.ServiceError): http.StatusInternalServerError
 //	- error: internal error
 func DecodeSymbolInfoResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
 	return func(resp *http.Response) (interface{}, error) {
@@ -164,9 +165,13 @@ func EncodeHistoryRequest(encoder func(*http.Request) goahttp.Encoder) func(*htt
 		values := req.URL.Query()
 		values.Add("symbol", p.Symbol)
 		values.Add("resolution", p.Resolution)
-		values.Add("from", fmt.Sprintf("%v", p.From))
+		if p.From != nil {
+			values.Add("from", fmt.Sprintf("%v", *p.From))
+		}
 		values.Add("to", fmt.Sprintf("%v", p.To))
-		values.Add("countback", fmt.Sprintf("%v", p.Countback))
+		if p.Countback != nil {
+			values.Add("countback", fmt.Sprintf("%v", *p.Countback))
+		}
 		req.URL.RawQuery = values.Encode()
 		return nil
 	}
@@ -176,9 +181,9 @@ func EncodeHistoryRequest(encoder func(*http.Request) goahttp.Encoder) func(*htt
 // ChronosAPI history endpoint. restoreBody controls whether the response body
 // should be restored after having been read.
 // DecodeHistoryResponse may return the following errors:
-//	- "bad_request" (type *chronosapi.BaseChronosResponse): http.StatusBadRequest
-//	- "not_found" (type *chronosapi.BaseChronosResponse): http.StatusNotFound
-//	- "internal" (type *chronosapi.BaseChronosResponse): http.StatusInternalServerError
+//	- "bad_request" (type *goa.ServiceError): http.StatusBadRequest
+//	- "not_found" (type *goa.ServiceError): http.StatusNotFound
+//	- "internal" (type *goa.ServiceError): http.StatusInternalServerError
 //	- error: internal error
 func DecodeHistoryResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
 	return func(resp *http.Response) (interface{}, error) {
@@ -257,4 +262,650 @@ func DecodeHistoryResponse(decoder func(*http.Response) goahttp.Decoder, restore
 			return nil, goahttp.ErrInvalidResponse("ChronosAPI", "history", resp.StatusCode, string(body))
 		}
 	}
+}
+
+// BuildFillsHistoryRequest instantiates a HTTP request object with method and
+// path set to call the "ChronosAPI" service "fillsHistory" endpoint
+func (c *Client) BuildFillsHistoryRequest(ctx context.Context, v interface{}) (*http.Request, error) {
+	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: FillsHistoryChronosAPIPath()}
+	req, err := http.NewRequest("GET", u.String(), nil)
+	if err != nil {
+		return nil, goahttp.ErrInvalidURL("ChronosAPI", "fillsHistory", u.String(), err)
+	}
+	if ctx != nil {
+		req = req.WithContext(ctx)
+	}
+
+	return req, nil
+}
+
+// EncodeFillsHistoryRequest returns an encoder for requests sent to the
+// ChronosAPI fillsHistory server.
+func EncodeFillsHistoryRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, interface{}) error {
+	return func(req *http.Request, v interface{}) error {
+		p, ok := v.(*chronosapi.FillsHistoryPayload)
+		if !ok {
+			return goahttp.ErrInvalidType("ChronosAPI", "fillsHistory", "*chronosapi.FillsHistoryPayload", v)
+		}
+		values := req.URL.Query()
+		if p.Account != nil {
+			values.Add("account", *p.Account)
+		}
+		values.Add("tradePair", p.TradePair)
+		req.URL.RawQuery = values.Encode()
+		return nil
+	}
+}
+
+// DecodeFillsHistoryResponse returns a decoder for responses returned by the
+// ChronosAPI fillsHistory endpoint. restoreBody controls whether the response
+// body should be restored after having been read.
+// DecodeFillsHistoryResponse may return the following errors:
+//	- "bad_request" (type *goa.ServiceError): http.StatusBadRequest
+//	- "not_found" (type *goa.ServiceError): http.StatusNotFound
+//	- "internal" (type *goa.ServiceError): http.StatusInternalServerError
+//	- error: internal error
+func DecodeFillsHistoryResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
+	return func(resp *http.Response) (interface{}, error) {
+		if restoreBody {
+			b, err := ioutil.ReadAll(resp.Body)
+			if err != nil {
+				return nil, err
+			}
+			resp.Body = ioutil.NopCloser(bytes.NewBuffer(b))
+			defer func() {
+				resp.Body = ioutil.NopCloser(bytes.NewBuffer(b))
+			}()
+		} else {
+			defer resp.Body.Close()
+		}
+		switch resp.StatusCode {
+		case http.StatusOK:
+			var (
+				body FillsHistoryResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("ChronosAPI", "fillsHistory", err)
+			}
+			for _, e := range body {
+				if e != nil {
+					if err2 := ValidateFillEventResponse(e); err2 != nil {
+						err = goa.MergeErrors(err, err2)
+					}
+				}
+			}
+			if err != nil {
+				return nil, goahttp.ErrValidationError("ChronosAPI", "fillsHistory", err)
+			}
+			res := NewFillsHistoryFillEventOK(body)
+			return res, nil
+		case http.StatusBadRequest:
+			var (
+				body FillsHistoryBadRequestResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("ChronosAPI", "fillsHistory", err)
+			}
+			err = ValidateFillsHistoryBadRequestResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("ChronosAPI", "fillsHistory", err)
+			}
+			return nil, NewFillsHistoryBadRequest(&body)
+		case http.StatusNotFound:
+			var (
+				body FillsHistoryNotFoundResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("ChronosAPI", "fillsHistory", err)
+			}
+			err = ValidateFillsHistoryNotFoundResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("ChronosAPI", "fillsHistory", err)
+			}
+			return nil, NewFillsHistoryNotFound(&body)
+		case http.StatusInternalServerError:
+			var (
+				body FillsHistoryInternalResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("ChronosAPI", "fillsHistory", err)
+			}
+			err = ValidateFillsHistoryInternalResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("ChronosAPI", "fillsHistory", err)
+			}
+			return nil, NewFillsHistoryInternal(&body)
+		default:
+			body, _ := ioutil.ReadAll(resp.Body)
+			return nil, goahttp.ErrInvalidResponse("ChronosAPI", "fillsHistory", resp.StatusCode, string(body))
+		}
+	}
+}
+
+// BuildMarketSummaryRequest instantiates a HTTP request object with method and
+// path set to call the "ChronosAPI" service "marketSummary" endpoint
+func (c *Client) BuildMarketSummaryRequest(ctx context.Context, v interface{}) (*http.Request, error) {
+	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: MarketSummaryChronosAPIPath()}
+	req, err := http.NewRequest("GET", u.String(), nil)
+	if err != nil {
+		return nil, goahttp.ErrInvalidURL("ChronosAPI", "marketSummary", u.String(), err)
+	}
+	if ctx != nil {
+		req = req.WithContext(ctx)
+	}
+
+	return req, nil
+}
+
+// EncodeMarketSummaryRequest returns an encoder for requests sent to the
+// ChronosAPI marketSummary server.
+func EncodeMarketSummaryRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, interface{}) error {
+	return func(req *http.Request, v interface{}) error {
+		p, ok := v.(*chronosapi.MarketSummaryPayload)
+		if !ok {
+			return goahttp.ErrInvalidType("ChronosAPI", "marketSummary", "*chronosapi.MarketSummaryPayload", v)
+		}
+		values := req.URL.Query()
+		values.Add("tradePair", p.TradePair)
+		values.Add("resolution", p.Resolution)
+		req.URL.RawQuery = values.Encode()
+		return nil
+	}
+}
+
+// DecodeMarketSummaryResponse returns a decoder for responses returned by the
+// ChronosAPI marketSummary endpoint. restoreBody controls whether the response
+// body should be restored after having been read.
+// DecodeMarketSummaryResponse may return the following errors:
+//	- "bad_request" (type *goa.ServiceError): http.StatusBadRequest
+//	- "not_found" (type *goa.ServiceError): http.StatusNotFound
+//	- "internal" (type *goa.ServiceError): http.StatusInternalServerError
+//	- error: internal error
+func DecodeMarketSummaryResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
+	return func(resp *http.Response) (interface{}, error) {
+		if restoreBody {
+			b, err := ioutil.ReadAll(resp.Body)
+			if err != nil {
+				return nil, err
+			}
+			resp.Body = ioutil.NopCloser(bytes.NewBuffer(b))
+			defer func() {
+				resp.Body = ioutil.NopCloser(bytes.NewBuffer(b))
+			}()
+		} else {
+			defer resp.Body.Close()
+		}
+		switch resp.StatusCode {
+		case http.StatusOK:
+			var (
+				body MarketSummaryResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("ChronosAPI", "marketSummary", err)
+			}
+			err = ValidateMarketSummaryResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("ChronosAPI", "marketSummary", err)
+			}
+			res := NewMarketSummaryResponseOK(&body)
+			return res, nil
+		case http.StatusBadRequest:
+			var (
+				body MarketSummaryBadRequestResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("ChronosAPI", "marketSummary", err)
+			}
+			err = ValidateMarketSummaryBadRequestResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("ChronosAPI", "marketSummary", err)
+			}
+			return nil, NewMarketSummaryBadRequest(&body)
+		case http.StatusNotFound:
+			var (
+				body MarketSummaryNotFoundResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("ChronosAPI", "marketSummary", err)
+			}
+			err = ValidateMarketSummaryNotFoundResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("ChronosAPI", "marketSummary", err)
+			}
+			return nil, NewMarketSummaryNotFound(&body)
+		case http.StatusInternalServerError:
+			var (
+				body MarketSummaryInternalResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("ChronosAPI", "marketSummary", err)
+			}
+			err = ValidateMarketSummaryInternalResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("ChronosAPI", "marketSummary", err)
+			}
+			return nil, NewMarketSummaryInternal(&body)
+		default:
+			body, _ := ioutil.ReadAll(resp.Body)
+			return nil, goahttp.ErrInvalidResponse("ChronosAPI", "marketSummary", resp.StatusCode, string(body))
+		}
+	}
+}
+
+// BuildFuturesHistoryRequest instantiates a HTTP request object with method
+// and path set to call the "ChronosAPI" service "futuresHistory" endpoint
+func (c *Client) BuildFuturesHistoryRequest(ctx context.Context, v interface{}) (*http.Request, error) {
+	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: FuturesHistoryChronosAPIPath()}
+	req, err := http.NewRequest("GET", u.String(), nil)
+	if err != nil {
+		return nil, goahttp.ErrInvalidURL("ChronosAPI", "futuresHistory", u.String(), err)
+	}
+	if ctx != nil {
+		req = req.WithContext(ctx)
+	}
+
+	return req, nil
+}
+
+// EncodeFuturesHistoryRequest returns an encoder for requests sent to the
+// ChronosAPI futuresHistory server.
+func EncodeFuturesHistoryRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, interface{}) error {
+	return func(req *http.Request, v interface{}) error {
+		p, ok := v.(*chronosapi.FuturesHistoryPayload)
+		if !ok {
+			return goahttp.ErrInvalidType("ChronosAPI", "futuresHistory", "*chronosapi.FuturesHistoryPayload", v)
+		}
+		values := req.URL.Query()
+		values.Add("marketId", p.MarketID)
+		values.Add("resolution", p.Resolution)
+		if p.From != nil {
+			values.Add("from", fmt.Sprintf("%v", *p.From))
+		}
+		values.Add("to", fmt.Sprintf("%v", p.To))
+		if p.Countback != nil {
+			values.Add("countback", fmt.Sprintf("%v", *p.Countback))
+		}
+		req.URL.RawQuery = values.Encode()
+		return nil
+	}
+}
+
+// DecodeFuturesHistoryResponse returns a decoder for responses returned by the
+// ChronosAPI futuresHistory endpoint. restoreBody controls whether the
+// response body should be restored after having been read.
+// DecodeFuturesHistoryResponse may return the following errors:
+//	- "bad_request" (type *goa.ServiceError): http.StatusBadRequest
+//	- "not_found" (type *goa.ServiceError): http.StatusNotFound
+//	- "internal" (type *goa.ServiceError): http.StatusInternalServerError
+//	- error: internal error
+func DecodeFuturesHistoryResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
+	return func(resp *http.Response) (interface{}, error) {
+		if restoreBody {
+			b, err := ioutil.ReadAll(resp.Body)
+			if err != nil {
+				return nil, err
+			}
+			resp.Body = ioutil.NopCloser(bytes.NewBuffer(b))
+			defer func() {
+				resp.Body = ioutil.NopCloser(bytes.NewBuffer(b))
+			}()
+		} else {
+			defer resp.Body.Close()
+		}
+		switch resp.StatusCode {
+		case http.StatusOK:
+			var (
+				body FuturesHistoryResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("ChronosAPI", "futuresHistory", err)
+			}
+			err = ValidateFuturesHistoryResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("ChronosAPI", "futuresHistory", err)
+			}
+			res := NewFuturesHistoryResponseOK(&body)
+			return res, nil
+		case http.StatusBadRequest:
+			var (
+				body FuturesHistoryBadRequestResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("ChronosAPI", "futuresHistory", err)
+			}
+			err = ValidateFuturesHistoryBadRequestResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("ChronosAPI", "futuresHistory", err)
+			}
+			return nil, NewFuturesHistoryBadRequest(&body)
+		case http.StatusNotFound:
+			var (
+				body FuturesHistoryNotFoundResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("ChronosAPI", "futuresHistory", err)
+			}
+			err = ValidateFuturesHistoryNotFoundResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("ChronosAPI", "futuresHistory", err)
+			}
+			return nil, NewFuturesHistoryNotFound(&body)
+		case http.StatusInternalServerError:
+			var (
+				body FuturesHistoryInternalResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("ChronosAPI", "futuresHistory", err)
+			}
+			err = ValidateFuturesHistoryInternalResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("ChronosAPI", "futuresHistory", err)
+			}
+			return nil, NewFuturesHistoryInternal(&body)
+		default:
+			body, _ := ioutil.ReadAll(resp.Body)
+			return nil, goahttp.ErrInvalidResponse("ChronosAPI", "futuresHistory", resp.StatusCode, string(body))
+		}
+	}
+}
+
+// BuildFuturesFillsHistoryRequest instantiates a HTTP request object with
+// method and path set to call the "ChronosAPI" service "futuresFillsHistory"
+// endpoint
+func (c *Client) BuildFuturesFillsHistoryRequest(ctx context.Context, v interface{}) (*http.Request, error) {
+	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: FuturesFillsHistoryChronosAPIPath()}
+	req, err := http.NewRequest("GET", u.String(), nil)
+	if err != nil {
+		return nil, goahttp.ErrInvalidURL("ChronosAPI", "futuresFillsHistory", u.String(), err)
+	}
+	if ctx != nil {
+		req = req.WithContext(ctx)
+	}
+
+	return req, nil
+}
+
+// EncodeFuturesFillsHistoryRequest returns an encoder for requests sent to the
+// ChronosAPI futuresFillsHistory server.
+func EncodeFuturesFillsHistoryRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, interface{}) error {
+	return func(req *http.Request, v interface{}) error {
+		p, ok := v.(*chronosapi.FuturesFillsHistoryPayload)
+		if !ok {
+			return goahttp.ErrInvalidType("ChronosAPI", "futuresFillsHistory", "*chronosapi.FuturesFillsHistoryPayload", v)
+		}
+		values := req.URL.Query()
+		if p.Account != nil {
+			values.Add("account", *p.Account)
+		}
+		values.Add("marketId", p.MarketID)
+		req.URL.RawQuery = values.Encode()
+		return nil
+	}
+}
+
+// DecodeFuturesFillsHistoryResponse returns a decoder for responses returned
+// by the ChronosAPI futuresFillsHistory endpoint. restoreBody controls whether
+// the response body should be restored after having been read.
+// DecodeFuturesFillsHistoryResponse may return the following errors:
+//	- "bad_request" (type *goa.ServiceError): http.StatusBadRequest
+//	- "not_found" (type *goa.ServiceError): http.StatusNotFound
+//	- "internal" (type *goa.ServiceError): http.StatusInternalServerError
+//	- error: internal error
+func DecodeFuturesFillsHistoryResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
+	return func(resp *http.Response) (interface{}, error) {
+		if restoreBody {
+			b, err := ioutil.ReadAll(resp.Body)
+			if err != nil {
+				return nil, err
+			}
+			resp.Body = ioutil.NopCloser(bytes.NewBuffer(b))
+			defer func() {
+				resp.Body = ioutil.NopCloser(bytes.NewBuffer(b))
+			}()
+		} else {
+			defer resp.Body.Close()
+		}
+		switch resp.StatusCode {
+		case http.StatusOK:
+			var (
+				body FuturesFillsHistoryResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("ChronosAPI", "futuresFillsHistory", err)
+			}
+			for _, e := range body {
+				if e != nil {
+					if err2 := ValidateFuturesFillEventResponse(e); err2 != nil {
+						err = goa.MergeErrors(err, err2)
+					}
+				}
+			}
+			if err != nil {
+				return nil, goahttp.ErrValidationError("ChronosAPI", "futuresFillsHistory", err)
+			}
+			res := NewFuturesFillsHistoryFuturesFillEventOK(body)
+			return res, nil
+		case http.StatusBadRequest:
+			var (
+				body FuturesFillsHistoryBadRequestResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("ChronosAPI", "futuresFillsHistory", err)
+			}
+			err = ValidateFuturesFillsHistoryBadRequestResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("ChronosAPI", "futuresFillsHistory", err)
+			}
+			return nil, NewFuturesFillsHistoryBadRequest(&body)
+		case http.StatusNotFound:
+			var (
+				body FuturesFillsHistoryNotFoundResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("ChronosAPI", "futuresFillsHistory", err)
+			}
+			err = ValidateFuturesFillsHistoryNotFoundResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("ChronosAPI", "futuresFillsHistory", err)
+			}
+			return nil, NewFuturesFillsHistoryNotFound(&body)
+		case http.StatusInternalServerError:
+			var (
+				body FuturesFillsHistoryInternalResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("ChronosAPI", "futuresFillsHistory", err)
+			}
+			err = ValidateFuturesFillsHistoryInternalResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("ChronosAPI", "futuresFillsHistory", err)
+			}
+			return nil, NewFuturesFillsHistoryInternal(&body)
+		default:
+			body, _ := ioutil.ReadAll(resp.Body)
+			return nil, goahttp.ErrInvalidResponse("ChronosAPI", "futuresFillsHistory", resp.StatusCode, string(body))
+		}
+	}
+}
+
+// BuildFuturesMarketSummaryRequest instantiates a HTTP request object with
+// method and path set to call the "ChronosAPI" service "futuresMarketSummary"
+// endpoint
+func (c *Client) BuildFuturesMarketSummaryRequest(ctx context.Context, v interface{}) (*http.Request, error) {
+	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: FuturesMarketSummaryChronosAPIPath()}
+	req, err := http.NewRequest("GET", u.String(), nil)
+	if err != nil {
+		return nil, goahttp.ErrInvalidURL("ChronosAPI", "futuresMarketSummary", u.String(), err)
+	}
+	if ctx != nil {
+		req = req.WithContext(ctx)
+	}
+
+	return req, nil
+}
+
+// EncodeFuturesMarketSummaryRequest returns an encoder for requests sent to
+// the ChronosAPI futuresMarketSummary server.
+func EncodeFuturesMarketSummaryRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, interface{}) error {
+	return func(req *http.Request, v interface{}) error {
+		p, ok := v.(*chronosapi.FuturesMarketSummaryPayload)
+		if !ok {
+			return goahttp.ErrInvalidType("ChronosAPI", "futuresMarketSummary", "*chronosapi.FuturesMarketSummaryPayload", v)
+		}
+		values := req.URL.Query()
+		values.Add("marketId", p.MarketID)
+		values.Add("resolution", p.Resolution)
+		req.URL.RawQuery = values.Encode()
+		return nil
+	}
+}
+
+// DecodeFuturesMarketSummaryResponse returns a decoder for responses returned
+// by the ChronosAPI futuresMarketSummary endpoint. restoreBody controls
+// whether the response body should be restored after having been read.
+// DecodeFuturesMarketSummaryResponse may return the following errors:
+//	- "bad_request" (type *goa.ServiceError): http.StatusBadRequest
+//	- "not_found" (type *goa.ServiceError): http.StatusNotFound
+//	- "internal" (type *goa.ServiceError): http.StatusInternalServerError
+//	- error: internal error
+func DecodeFuturesMarketSummaryResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (interface{}, error) {
+	return func(resp *http.Response) (interface{}, error) {
+		if restoreBody {
+			b, err := ioutil.ReadAll(resp.Body)
+			if err != nil {
+				return nil, err
+			}
+			resp.Body = ioutil.NopCloser(bytes.NewBuffer(b))
+			defer func() {
+				resp.Body = ioutil.NopCloser(bytes.NewBuffer(b))
+			}()
+		} else {
+			defer resp.Body.Close()
+		}
+		switch resp.StatusCode {
+		case http.StatusOK:
+			var (
+				body FuturesMarketSummaryResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("ChronosAPI", "futuresMarketSummary", err)
+			}
+			err = ValidateFuturesMarketSummaryResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("ChronosAPI", "futuresMarketSummary", err)
+			}
+			res := NewFuturesMarketSummaryResponseOK(&body)
+			return res, nil
+		case http.StatusBadRequest:
+			var (
+				body FuturesMarketSummaryBadRequestResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("ChronosAPI", "futuresMarketSummary", err)
+			}
+			err = ValidateFuturesMarketSummaryBadRequestResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("ChronosAPI", "futuresMarketSummary", err)
+			}
+			return nil, NewFuturesMarketSummaryBadRequest(&body)
+		case http.StatusNotFound:
+			var (
+				body FuturesMarketSummaryNotFoundResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("ChronosAPI", "futuresMarketSummary", err)
+			}
+			err = ValidateFuturesMarketSummaryNotFoundResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("ChronosAPI", "futuresMarketSummary", err)
+			}
+			return nil, NewFuturesMarketSummaryNotFound(&body)
+		case http.StatusInternalServerError:
+			var (
+				body FuturesMarketSummaryInternalResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("ChronosAPI", "futuresMarketSummary", err)
+			}
+			err = ValidateFuturesMarketSummaryInternalResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("ChronosAPI", "futuresMarketSummary", err)
+			}
+			return nil, NewFuturesMarketSummaryInternal(&body)
+		default:
+			body, _ := ioutil.ReadAll(resp.Body)
+			return nil, goahttp.ErrInvalidResponse("ChronosAPI", "futuresMarketSummary", resp.StatusCode, string(body))
+		}
+	}
+}
+
+// unmarshalFillEventResponseToChronosapiFillEvent builds a value of type
+// *chronosapi.FillEvent from a value of type *FillEventResponse.
+func unmarshalFillEventResponseToChronosapiFillEvent(v *FillEventResponse) *chronosapi.FillEvent {
+	res := &chronosapi.FillEvent{
+		Side:   *v.Side,
+		Ts:     *v.Ts,
+		Size:   *v.Size,
+		Filled: *v.Filled,
+		Price:  *v.Price,
+		TxHash: v.TxHash,
+	}
+
+	return res
+}
+
+// unmarshalFuturesFillEventResponseToChronosapiFuturesFillEvent builds a value
+// of type *chronosapi.FuturesFillEvent from a value of type
+// *FuturesFillEventResponse.
+func unmarshalFuturesFillEventResponseToChronosapiFuturesFillEvent(v *FuturesFillEventResponse) *chronosapi.FuturesFillEvent {
+	res := &chronosapi.FuturesFillEvent{
+		Side:   *v.Side,
+		Ts:     *v.Ts,
+		Size:   *v.Size,
+		Filled: *v.Filled,
+		Price:  *v.Price,
+		TxHash: v.TxHash,
+	}
+
+	return res
 }

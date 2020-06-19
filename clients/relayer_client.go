@@ -90,6 +90,48 @@ func (c *SRAClient) Orderbook(
 	return res.Bids.Records, res.Asks.Records, nil
 }
 
+func (c *SRAClient) DerivativeOrders(
+	ctx context.Context,
+	assetData string,
+) (bids, asks []*sraAPI.OrderRecord, err error) {
+	if c.client == nil {
+		err = ErrClientUnavailable
+		return
+	}
+	emptyAssetStr := "0x000000000000000000000000000000000000000000000000000000000000000000000000"
+	longRes, err := c.client.Orders(ctx, &sraAPI.OrdersPayload{
+		MakerAssetData: &assetData,
+		TakerAssetData: &emptyAssetStr,
+		MakerFeeAssetData: &emptyAssetStr,
+		TakerFeeAssetData: &emptyAssetStr,
+	})
+	if err != nil {
+		err = errors.Wrap(err, "failed to get derivative orders")
+		return
+	}
+
+	shortRes, err := c.client.Orders(ctx, &sraAPI.OrdersPayload{
+		MakerAssetData: &emptyAssetStr,
+		TakerAssetData: &assetData,
+		MakerFeeAssetData: &emptyAssetStr,
+		TakerFeeAssetData: &emptyAssetStr,
+	})
+
+
+	if err != nil {
+		err = errors.Wrap(err, "failed to get derivative orders")
+		return
+	}
+	for _, order := range longRes.Records {
+		bids = append(bids, order)
+	}
+
+	for _, order := range shortRes.Records {
+		asks = append(asks, order)
+	}
+	return bids, asks, nil
+}
+
 func (c *SRAClient) PostOrder(
 	ctx context.Context,
 	order *zeroex.SignedOrder,

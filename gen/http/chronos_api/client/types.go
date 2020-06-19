@@ -8,6 +8,8 @@
 package client
 
 import (
+	"unicode/utf8"
+
 	chronosapi "github.com/InjectiveLabs/dexterm/gen/chronos_api"
 	goa "goa.design/goa/v3/pkg"
 )
@@ -126,58 +128,487 @@ type HistoryResponseBody struct {
 	V []float64 `form:"v,omitempty" json:"v,omitempty" xml:"v,omitempty"`
 }
 
-// SymbolInfoBadRequestResponseBody is the type of the "ChronosAPI" service
-// "symbolInfo" endpoint HTTP response body for the "bad_request" error.
-type SymbolInfoBadRequestResponseBody struct {
+// FillsHistoryResponseBody is the type of the "ChronosAPI" service
+// "fillsHistory" endpoint HTTP response body.
+type FillsHistoryResponseBody []*FillEventResponse
+
+// MarketSummaryResponseBody is the type of the "ChronosAPI" service
+// "marketSummary" endpoint HTTP response body.
+type MarketSummaryResponseBody struct {
+	// Open price.
+	Open *float64 `form:"open,omitempty" json:"open,omitempty" xml:"open,omitempty"`
+	// High price.
+	High *float64 `form:"high,omitempty" json:"high,omitempty" xml:"high,omitempty"`
+	// Low price.
+	Low *float64 `form:"low,omitempty" json:"low,omitempty" xml:"low,omitempty"`
+	// Volume.
+	Volume *float64 `form:"volume,omitempty" json:"volume,omitempty" xml:"volume,omitempty"`
+	// Current price based on latest fill event.
+	Price *float64 `form:"price,omitempty" json:"price,omitempty" xml:"price,omitempty"`
+	// Change percent from the previous period on the same resolution.
+	Change *float64 `form:"change,omitempty" json:"change,omitempty" xml:"change,omitempty"`
+}
+
+// FuturesHistoryResponseBody is the type of the "ChronosAPI" service
+// "futuresHistory" endpoint HTTP response body.
+type FuturesHistoryResponseBody struct {
 	// Status of the response.
 	S *string `form:"s,omitempty" json:"s,omitempty" xml:"s,omitempty"`
 	// Error message.
 	Errmsg *string `form:"errmsg,omitempty" json:"errmsg,omitempty" xml:"errmsg,omitempty"`
+	// Unix time of the next bar if there is no data in the requested period
+	// (optional).
+	Nb *int `form:"nb,omitempty" json:"nb,omitempty" xml:"nb,omitempty"`
+	// Bar time, Unix timestamp (UTC). Daily bars should only have the date part,
+	// time should be 0.
+	T []int `form:"t,omitempty" json:"t,omitempty" xml:"t,omitempty"`
+	// Open price.
+	O []float64 `form:"o,omitempty" json:"o,omitempty" xml:"o,omitempty"`
+	// High price.
+	H []float64 `form:"h,omitempty" json:"h,omitempty" xml:"h,omitempty"`
+	// Low price.
+	L []float64 `form:"l,omitempty" json:"l,omitempty" xml:"l,omitempty"`
+	// Close price.
+	C []float64 `form:"c,omitempty" json:"c,omitempty" xml:"c,omitempty"`
+	// Volume.
+	V []float64 `form:"v,omitempty" json:"v,omitempty" xml:"v,omitempty"`
+}
+
+// FuturesFillsHistoryResponseBody is the type of the "ChronosAPI" service
+// "futuresFillsHistory" endpoint HTTP response body.
+type FuturesFillsHistoryResponseBody []*FuturesFillEventResponse
+
+// FuturesMarketSummaryResponseBody is the type of the "ChronosAPI" service
+// "futuresMarketSummary" endpoint HTTP response body.
+type FuturesMarketSummaryResponseBody struct {
+	// Open price.
+	Open *float64 `form:"open,omitempty" json:"open,omitempty" xml:"open,omitempty"`
+	// High price.
+	High *float64 `form:"high,omitempty" json:"high,omitempty" xml:"high,omitempty"`
+	// Low price.
+	Low *float64 `form:"low,omitempty" json:"low,omitempty" xml:"low,omitempty"`
+	// Volume.
+	Volume *float64 `form:"volume,omitempty" json:"volume,omitempty" xml:"volume,omitempty"`
+	// Current price based on latest fill event.
+	Price *float64 `form:"price,omitempty" json:"price,omitempty" xml:"price,omitempty"`
+	// Change percent from the previous period on the same resolution.
+	Change *float64 `form:"change,omitempty" json:"change,omitempty" xml:"change,omitempty"`
+}
+
+// SymbolInfoBadRequestResponseBody is the type of the "ChronosAPI" service
+// "symbolInfo" endpoint HTTP response body for the "bad_request" error.
+type SymbolInfoBadRequestResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
 }
 
 // SymbolInfoNotFoundResponseBody is the type of the "ChronosAPI" service
 // "symbolInfo" endpoint HTTP response body for the "not_found" error.
 type SymbolInfoNotFoundResponseBody struct {
-	// Status of the response.
-	S *string `form:"s,omitempty" json:"s,omitempty" xml:"s,omitempty"`
-	// Error message.
-	Errmsg *string `form:"errmsg,omitempty" json:"errmsg,omitempty" xml:"errmsg,omitempty"`
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
 }
 
 // SymbolInfoInternalResponseBody is the type of the "ChronosAPI" service
 // "symbolInfo" endpoint HTTP response body for the "internal" error.
 type SymbolInfoInternalResponseBody struct {
-	// Status of the response.
-	S *string `form:"s,omitempty" json:"s,omitempty" xml:"s,omitempty"`
-	// Error message.
-	Errmsg *string `form:"errmsg,omitempty" json:"errmsg,omitempty" xml:"errmsg,omitempty"`
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
 }
 
 // HistoryBadRequestResponseBody is the type of the "ChronosAPI" service
 // "history" endpoint HTTP response body for the "bad_request" error.
 type HistoryBadRequestResponseBody struct {
-	// Status of the response.
-	S *string `form:"s,omitempty" json:"s,omitempty" xml:"s,omitempty"`
-	// Error message.
-	Errmsg *string `form:"errmsg,omitempty" json:"errmsg,omitempty" xml:"errmsg,omitempty"`
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
 }
 
 // HistoryNotFoundResponseBody is the type of the "ChronosAPI" service
 // "history" endpoint HTTP response body for the "not_found" error.
 type HistoryNotFoundResponseBody struct {
-	// Status of the response.
-	S *string `form:"s,omitempty" json:"s,omitempty" xml:"s,omitempty"`
-	// Error message.
-	Errmsg *string `form:"errmsg,omitempty" json:"errmsg,omitempty" xml:"errmsg,omitempty"`
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
 }
 
 // HistoryInternalResponseBody is the type of the "ChronosAPI" service
 // "history" endpoint HTTP response body for the "internal" error.
 type HistoryInternalResponseBody struct {
-	// Status of the response.
-	S *string `form:"s,omitempty" json:"s,omitempty" xml:"s,omitempty"`
-	// Error message.
-	Errmsg *string `form:"errmsg,omitempty" json:"errmsg,omitempty" xml:"errmsg,omitempty"`
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// FillsHistoryBadRequestResponseBody is the type of the "ChronosAPI" service
+// "fillsHistory" endpoint HTTP response body for the "bad_request" error.
+type FillsHistoryBadRequestResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// FillsHistoryNotFoundResponseBody is the type of the "ChronosAPI" service
+// "fillsHistory" endpoint HTTP response body for the "not_found" error.
+type FillsHistoryNotFoundResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// FillsHistoryInternalResponseBody is the type of the "ChronosAPI" service
+// "fillsHistory" endpoint HTTP response body for the "internal" error.
+type FillsHistoryInternalResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// MarketSummaryBadRequestResponseBody is the type of the "ChronosAPI" service
+// "marketSummary" endpoint HTTP response body for the "bad_request" error.
+type MarketSummaryBadRequestResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// MarketSummaryNotFoundResponseBody is the type of the "ChronosAPI" service
+// "marketSummary" endpoint HTTP response body for the "not_found" error.
+type MarketSummaryNotFoundResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// MarketSummaryInternalResponseBody is the type of the "ChronosAPI" service
+// "marketSummary" endpoint HTTP response body for the "internal" error.
+type MarketSummaryInternalResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// FuturesHistoryBadRequestResponseBody is the type of the "ChronosAPI" service
+// "futuresHistory" endpoint HTTP response body for the "bad_request" error.
+type FuturesHistoryBadRequestResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// FuturesHistoryNotFoundResponseBody is the type of the "ChronosAPI" service
+// "futuresHistory" endpoint HTTP response body for the "not_found" error.
+type FuturesHistoryNotFoundResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// FuturesHistoryInternalResponseBody is the type of the "ChronosAPI" service
+// "futuresHistory" endpoint HTTP response body for the "internal" error.
+type FuturesHistoryInternalResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// FuturesFillsHistoryBadRequestResponseBody is the type of the "ChronosAPI"
+// service "futuresFillsHistory" endpoint HTTP response body for the
+// "bad_request" error.
+type FuturesFillsHistoryBadRequestResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// FuturesFillsHistoryNotFoundResponseBody is the type of the "ChronosAPI"
+// service "futuresFillsHistory" endpoint HTTP response body for the
+// "not_found" error.
+type FuturesFillsHistoryNotFoundResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// FuturesFillsHistoryInternalResponseBody is the type of the "ChronosAPI"
+// service "futuresFillsHistory" endpoint HTTP response body for the "internal"
+// error.
+type FuturesFillsHistoryInternalResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// FuturesMarketSummaryBadRequestResponseBody is the type of the "ChronosAPI"
+// service "futuresMarketSummary" endpoint HTTP response body for the
+// "bad_request" error.
+type FuturesMarketSummaryBadRequestResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// FuturesMarketSummaryNotFoundResponseBody is the type of the "ChronosAPI"
+// service "futuresMarketSummary" endpoint HTTP response body for the
+// "not_found" error.
+type FuturesMarketSummaryNotFoundResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// FuturesMarketSummaryInternalResponseBody is the type of the "ChronosAPI"
+// service "futuresMarketSummary" endpoint HTTP response body for the
+// "internal" error.
+type FuturesMarketSummaryInternalResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// FillEventResponse is used to define fields on response body types.
+type FillEventResponse struct {
+	// Account's side in the trade
+	Side *string `form:"side,omitempty" json:"side,omitempty" xml:"side,omitempty"`
+	// UNIX timestamp of the fill event
+	Ts *int64 `form:"ts,omitempty" json:"ts,omitempty" xml:"ts,omitempty"`
+	// Filled amount in quote currency
+	Size *float64 `form:"size,omitempty" json:"size,omitempty" xml:"size,omitempty"`
+	// Filled amount in base currency
+	Filled *float64 `form:"filled,omitempty" json:"filled,omitempty" xml:"filled,omitempty"`
+	// Price in quote currency
+	Price *float64 `form:"price,omitempty" json:"price,omitempty" xml:"price,omitempty"`
+	// Transaction hash related to this fill
+	TxHash *string `form:"txHash,omitempty" json:"txHash,omitempty" xml:"txHash,omitempty"`
+}
+
+// FuturesFillEventResponse is used to define fields on response body types.
+type FuturesFillEventResponse struct {
+	// Account's side in the trade
+	Side *string `form:"side,omitempty" json:"side,omitempty" xml:"side,omitempty"`
+	// UNIX timestamp of the fill event
+	Ts *int64 `form:"ts,omitempty" json:"ts,omitempty" xml:"ts,omitempty"`
+	// Filled amount in quote currency
+	Size *float64 `form:"size,omitempty" json:"size,omitempty" xml:"size,omitempty"`
+	// Filled amount in base currency
+	Filled *float64 `form:"filled,omitempty" json:"filled,omitempty" xml:"filled,omitempty"`
+	// Price in quote currency
+	Price *float64 `form:"price,omitempty" json:"price,omitempty" xml:"price,omitempty"`
+	// Transaction hash related to this fill
+	TxHash *string `form:"txHash,omitempty" json:"txHash,omitempty" xml:"txHash,omitempty"`
 }
 
 // NewSymbolInfoTradingViewSymbolInfoResponseOK builds a "ChronosAPI" service
@@ -335,10 +766,14 @@ func NewSymbolInfoTradingViewSymbolInfoResponseOK(body *SymbolInfoResponseBody) 
 
 // NewSymbolInfoBadRequest builds a ChronosAPI service symbolInfo endpoint
 // bad_request error.
-func NewSymbolInfoBadRequest(body *SymbolInfoBadRequestResponseBody) *chronosapi.BaseChronosResponse {
-	v := &chronosapi.BaseChronosResponse{
-		S:      *body.S,
-		Errmsg: body.Errmsg,
+func NewSymbolInfoBadRequest(body *SymbolInfoBadRequestResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
 	}
 
 	return v
@@ -346,10 +781,14 @@ func NewSymbolInfoBadRequest(body *SymbolInfoBadRequestResponseBody) *chronosapi
 
 // NewSymbolInfoNotFound builds a ChronosAPI service symbolInfo endpoint
 // not_found error.
-func NewSymbolInfoNotFound(body *SymbolInfoNotFoundResponseBody) *chronosapi.BaseChronosResponse {
-	v := &chronosapi.BaseChronosResponse{
-		S:      *body.S,
-		Errmsg: body.Errmsg,
+func NewSymbolInfoNotFound(body *SymbolInfoNotFoundResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
 	}
 
 	return v
@@ -357,10 +796,14 @@ func NewSymbolInfoNotFound(body *SymbolInfoNotFoundResponseBody) *chronosapi.Bas
 
 // NewSymbolInfoInternal builds a ChronosAPI service symbolInfo endpoint
 // internal error.
-func NewSymbolInfoInternal(body *SymbolInfoInternalResponseBody) *chronosapi.BaseChronosResponse {
-	v := &chronosapi.BaseChronosResponse{
-		S:      *body.S,
-		Errmsg: body.Errmsg,
+func NewSymbolInfoInternal(body *SymbolInfoInternalResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
 	}
 
 	return v
@@ -404,10 +847,14 @@ func NewHistoryResponseOK(body *HistoryResponseBody) *chronosapi.HistoryResponse
 
 // NewHistoryBadRequest builds a ChronosAPI service history endpoint
 // bad_request error.
-func NewHistoryBadRequest(body *HistoryBadRequestResponseBody) *chronosapi.BaseChronosResponse {
-	v := &chronosapi.BaseChronosResponse{
-		S:      *body.S,
-		Errmsg: body.Errmsg,
+func NewHistoryBadRequest(body *HistoryBadRequestResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
 	}
 
 	return v
@@ -415,10 +862,14 @@ func NewHistoryBadRequest(body *HistoryBadRequestResponseBody) *chronosapi.BaseC
 
 // NewHistoryNotFound builds a ChronosAPI service history endpoint not_found
 // error.
-func NewHistoryNotFound(body *HistoryNotFoundResponseBody) *chronosapi.BaseChronosResponse {
-	v := &chronosapi.BaseChronosResponse{
-		S:      *body.S,
-		Errmsg: body.Errmsg,
+func NewHistoryNotFound(body *HistoryNotFoundResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
 	}
 
 	return v
@@ -426,10 +877,325 @@ func NewHistoryNotFound(body *HistoryNotFoundResponseBody) *chronosapi.BaseChron
 
 // NewHistoryInternal builds a ChronosAPI service history endpoint internal
 // error.
-func NewHistoryInternal(body *HistoryInternalResponseBody) *chronosapi.BaseChronosResponse {
-	v := &chronosapi.BaseChronosResponse{
+func NewHistoryInternal(body *HistoryInternalResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewFillsHistoryFillEventOK builds a "ChronosAPI" service "fillsHistory"
+// endpoint result from a HTTP "OK" response.
+func NewFillsHistoryFillEventOK(body []*FillEventResponse) []*chronosapi.FillEvent {
+	v := make([]*chronosapi.FillEvent, len(body))
+	for i, val := range body {
+		v[i] = unmarshalFillEventResponseToChronosapiFillEvent(val)
+	}
+	return v
+}
+
+// NewFillsHistoryBadRequest builds a ChronosAPI service fillsHistory endpoint
+// bad_request error.
+func NewFillsHistoryBadRequest(body *FillsHistoryBadRequestResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewFillsHistoryNotFound builds a ChronosAPI service fillsHistory endpoint
+// not_found error.
+func NewFillsHistoryNotFound(body *FillsHistoryNotFoundResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewFillsHistoryInternal builds a ChronosAPI service fillsHistory endpoint
+// internal error.
+func NewFillsHistoryInternal(body *FillsHistoryInternalResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewMarketSummaryResponseOK builds a "ChronosAPI" service "marketSummary"
+// endpoint result from a HTTP "OK" response.
+func NewMarketSummaryResponseOK(body *MarketSummaryResponseBody) *chronosapi.MarketSummaryResponse {
+	v := &chronosapi.MarketSummaryResponse{
+		Open:   *body.Open,
+		High:   *body.High,
+		Low:    *body.Low,
+		Volume: *body.Volume,
+		Price:  *body.Price,
+		Change: *body.Change,
+	}
+
+	return v
+}
+
+// NewMarketSummaryBadRequest builds a ChronosAPI service marketSummary
+// endpoint bad_request error.
+func NewMarketSummaryBadRequest(body *MarketSummaryBadRequestResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewMarketSummaryNotFound builds a ChronosAPI service marketSummary endpoint
+// not_found error.
+func NewMarketSummaryNotFound(body *MarketSummaryNotFoundResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewMarketSummaryInternal builds a ChronosAPI service marketSummary endpoint
+// internal error.
+func NewMarketSummaryInternal(body *MarketSummaryInternalResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewFuturesHistoryResponseOK builds a "ChronosAPI" service "futuresHistory"
+// endpoint result from a HTTP "OK" response.
+func NewFuturesHistoryResponseOK(body *FuturesHistoryResponseBody) *chronosapi.FuturesHistoryResponse {
+	v := &chronosapi.FuturesHistoryResponse{
 		S:      *body.S,
 		Errmsg: body.Errmsg,
+		Nb:     body.Nb,
+	}
+	v.T = make([]int, len(body.T))
+	for i, val := range body.T {
+		v.T[i] = val
+	}
+	v.O = make([]float64, len(body.O))
+	for i, val := range body.O {
+		v.O[i] = val
+	}
+	v.H = make([]float64, len(body.H))
+	for i, val := range body.H {
+		v.H[i] = val
+	}
+	v.L = make([]float64, len(body.L))
+	for i, val := range body.L {
+		v.L[i] = val
+	}
+	v.C = make([]float64, len(body.C))
+	for i, val := range body.C {
+		v.C[i] = val
+	}
+	v.V = make([]float64, len(body.V))
+	for i, val := range body.V {
+		v.V[i] = val
+	}
+
+	return v
+}
+
+// NewFuturesHistoryBadRequest builds a ChronosAPI service futuresHistory
+// endpoint bad_request error.
+func NewFuturesHistoryBadRequest(body *FuturesHistoryBadRequestResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewFuturesHistoryNotFound builds a ChronosAPI service futuresHistory
+// endpoint not_found error.
+func NewFuturesHistoryNotFound(body *FuturesHistoryNotFoundResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewFuturesHistoryInternal builds a ChronosAPI service futuresHistory
+// endpoint internal error.
+func NewFuturesHistoryInternal(body *FuturesHistoryInternalResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewFuturesFillsHistoryFuturesFillEventOK builds a "ChronosAPI" service
+// "futuresFillsHistory" endpoint result from a HTTP "OK" response.
+func NewFuturesFillsHistoryFuturesFillEventOK(body []*FuturesFillEventResponse) []*chronosapi.FuturesFillEvent {
+	v := make([]*chronosapi.FuturesFillEvent, len(body))
+	for i, val := range body {
+		v[i] = unmarshalFuturesFillEventResponseToChronosapiFuturesFillEvent(val)
+	}
+	return v
+}
+
+// NewFuturesFillsHistoryBadRequest builds a ChronosAPI service
+// futuresFillsHistory endpoint bad_request error.
+func NewFuturesFillsHistoryBadRequest(body *FuturesFillsHistoryBadRequestResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewFuturesFillsHistoryNotFound builds a ChronosAPI service
+// futuresFillsHistory endpoint not_found error.
+func NewFuturesFillsHistoryNotFound(body *FuturesFillsHistoryNotFoundResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewFuturesFillsHistoryInternal builds a ChronosAPI service
+// futuresFillsHistory endpoint internal error.
+func NewFuturesFillsHistoryInternal(body *FuturesFillsHistoryInternalResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewFuturesMarketSummaryResponseOK builds a "ChronosAPI" service
+// "futuresMarketSummary" endpoint result from a HTTP "OK" response.
+func NewFuturesMarketSummaryResponseOK(body *FuturesMarketSummaryResponseBody) *chronosapi.FuturesMarketSummaryResponse {
+	v := &chronosapi.FuturesMarketSummaryResponse{
+		Open:   *body.Open,
+		High:   *body.High,
+		Low:    *body.Low,
+		Volume: *body.Volume,
+		Price:  *body.Price,
+		Change: *body.Change,
+	}
+
+	return v
+}
+
+// NewFuturesMarketSummaryBadRequest builds a ChronosAPI service
+// futuresMarketSummary endpoint bad_request error.
+func NewFuturesMarketSummaryBadRequest(body *FuturesMarketSummaryBadRequestResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewFuturesMarketSummaryNotFound builds a ChronosAPI service
+// futuresMarketSummary endpoint not_found error.
+func NewFuturesMarketSummaryNotFound(body *FuturesMarketSummaryNotFoundResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewFuturesMarketSummaryInternal builds a ChronosAPI service
+// futuresMarketSummary endpoint internal error.
+func NewFuturesMarketSummaryInternal(body *FuturesMarketSummaryInternalResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
 	}
 
 	return v
@@ -474,11 +1240,6 @@ func ValidateSymbolInfoResponseBody(body *SymbolInfoResponseBody) (err error) {
 	if body.S != nil {
 		if !(*body.S == "ok" || *body.S == "error" || *body.S == "no_data") {
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.s", *body.S, []interface{}{"ok", "error", "no_data"}))
-		}
-	}
-	for _, e := range body.Timezone {
-		if !(e == "America/New_York" || e == "America/Los_Angeles" || e == "America/Chicago" || e == "America/Phoenix" || e == "America/Toronto" || e == "America/Vancouver" || e == "America/Argentina/Buenos_Aires" || e == "America/El_Salvador" || e == "America/Sao_Paulo" || e == "America/Bogota" || e == "Europe/Moscow" || e == "Europe/Athens" || e == "Europe/Berlin" || e == "Europe/London" || e == "Europe/Madrid" || e == "Europe/Paris" || e == "Europe/Warsaw" || e == "Australia/Sydney" || e == "Australia/Brisbane" || e == "Australia/Adelaide" || e == "Australia/ACT" || e == "Asia/Almaty" || e == "Asia/Ashkhabad" || e == "Asia/Tokyo" || e == "Asia/Taipei" || e == "Asia/Singapore" || e == "Asia/Shanghai" || e == "Asia/Seoul" || e == "Asia/Tehran" || e == "Asia/Dubai" || e == "Asia/Kolkata" || e == "Asia/Hong_Kong" || e == "Asia/Bangkok" || e == "Pacific/Auckland" || e == "Pacific/Chatham" || e == "Pacific/Fakaofo" || e == "Pacific/Honolulu" || e == "America/Mexico_City" || e == "Africa/Johannesburg" || e == "Asia/Kathmandu" || e == "US/Mountain") {
-			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.timezone[*]", e, []interface{}{"America/New_York", "America/Los_Angeles", "America/Chicago", "America/Phoenix", "America/Toronto", "America/Vancouver", "America/Argentina/Buenos_Aires", "America/El_Salvador", "America/Sao_Paulo", "America/Bogota", "Europe/Moscow", "Europe/Athens", "Europe/Berlin", "Europe/London", "Europe/Madrid", "Europe/Paris", "Europe/Warsaw", "Australia/Sydney", "Australia/Brisbane", "Australia/Adelaide", "Australia/ACT", "Asia/Almaty", "Asia/Ashkhabad", "Asia/Tokyo", "Asia/Taipei", "Asia/Singapore", "Asia/Shanghai", "Asia/Seoul", "Asia/Tehran", "Asia/Dubai", "Asia/Kolkata", "Asia/Hong_Kong", "Asia/Bangkok", "Pacific/Auckland", "Pacific/Chatham", "Pacific/Fakaofo", "Pacific/Honolulu", "America/Mexico_City", "Africa/Johannesburg", "Asia/Kathmandu", "US/Mountain"}))
 		}
 	}
 	for _, e := range body.Type {
@@ -536,16 +1297,106 @@ func ValidateHistoryResponseBody(body *HistoryResponseBody) (err error) {
 	return
 }
 
-// ValidateSymbolInfoBadRequestResponseBody runs the validations defined on
-// symbolInfo_bad_request_response_body
-func ValidateSymbolInfoBadRequestResponseBody(body *SymbolInfoBadRequestResponseBody) (err error) {
+// ValidateMarketSummaryResponseBody runs the validations defined on
+// MarketSummaryResponseBody
+func ValidateMarketSummaryResponseBody(body *MarketSummaryResponseBody) (err error) {
+	if body.Open == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("open", "body"))
+	}
+	if body.High == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("high", "body"))
+	}
+	if body.Low == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("low", "body"))
+	}
+	if body.Volume == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("volume", "body"))
+	}
+	if body.Price == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("price", "body"))
+	}
+	if body.Change == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("change", "body"))
+	}
+	return
+}
+
+// ValidateFuturesHistoryResponseBody runs the validations defined on
+// FuturesHistoryResponseBody
+func ValidateFuturesHistoryResponseBody(body *FuturesHistoryResponseBody) (err error) {
 	if body.S == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("s", "body"))
+	}
+	if body.T == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("t", "body"))
+	}
+	if body.O == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("o", "body"))
+	}
+	if body.H == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("h", "body"))
+	}
+	if body.L == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("l", "body"))
+	}
+	if body.C == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("c", "body"))
+	}
+	if body.V == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("v", "body"))
 	}
 	if body.S != nil {
 		if !(*body.S == "ok" || *body.S == "error" || *body.S == "no_data") {
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.s", *body.S, []interface{}{"ok", "error", "no_data"}))
 		}
+	}
+	return
+}
+
+// ValidateFuturesMarketSummaryResponseBody runs the validations defined on
+// FuturesMarketSummaryResponseBody
+func ValidateFuturesMarketSummaryResponseBody(body *FuturesMarketSummaryResponseBody) (err error) {
+	if body.Open == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("open", "body"))
+	}
+	if body.High == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("high", "body"))
+	}
+	if body.Low == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("low", "body"))
+	}
+	if body.Volume == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("volume", "body"))
+	}
+	if body.Price == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("price", "body"))
+	}
+	if body.Change == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("change", "body"))
+	}
+	return
+}
+
+// ValidateSymbolInfoBadRequestResponseBody runs the validations defined on
+// symbolInfo_bad_request_response_body
+func ValidateSymbolInfoBadRequestResponseBody(body *SymbolInfoBadRequestResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
 	}
 	return
 }
@@ -553,13 +1404,23 @@ func ValidateSymbolInfoBadRequestResponseBody(body *SymbolInfoBadRequestResponse
 // ValidateSymbolInfoNotFoundResponseBody runs the validations defined on
 // symbolInfo_not_found_response_body
 func ValidateSymbolInfoNotFoundResponseBody(body *SymbolInfoNotFoundResponseBody) (err error) {
-	if body.S == nil {
-		err = goa.MergeErrors(err, goa.MissingFieldError("s", "body"))
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
 	}
-	if body.S != nil {
-		if !(*body.S == "ok" || *body.S == "error" || *body.S == "no_data") {
-			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.s", *body.S, []interface{}{"ok", "error", "no_data"}))
-		}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
 	}
 	return
 }
@@ -567,13 +1428,23 @@ func ValidateSymbolInfoNotFoundResponseBody(body *SymbolInfoNotFoundResponseBody
 // ValidateSymbolInfoInternalResponseBody runs the validations defined on
 // symbolInfo_internal_response_body
 func ValidateSymbolInfoInternalResponseBody(body *SymbolInfoInternalResponseBody) (err error) {
-	if body.S == nil {
-		err = goa.MergeErrors(err, goa.MissingFieldError("s", "body"))
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
 	}
-	if body.S != nil {
-		if !(*body.S == "ok" || *body.S == "error" || *body.S == "no_data") {
-			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.s", *body.S, []interface{}{"ok", "error", "no_data"}))
-		}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
 	}
 	return
 }
@@ -581,13 +1452,23 @@ func ValidateSymbolInfoInternalResponseBody(body *SymbolInfoInternalResponseBody
 // ValidateHistoryBadRequestResponseBody runs the validations defined on
 // history_bad_request_response_body
 func ValidateHistoryBadRequestResponseBody(body *HistoryBadRequestResponseBody) (err error) {
-	if body.S == nil {
-		err = goa.MergeErrors(err, goa.MissingFieldError("s", "body"))
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
 	}
-	if body.S != nil {
-		if !(*body.S == "ok" || *body.S == "error" || *body.S == "no_data") {
-			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.s", *body.S, []interface{}{"ok", "error", "no_data"}))
-		}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
 	}
 	return
 }
@@ -595,13 +1476,23 @@ func ValidateHistoryBadRequestResponseBody(body *HistoryBadRequestResponseBody) 
 // ValidateHistoryNotFoundResponseBody runs the validations defined on
 // history_not_found_response_body
 func ValidateHistoryNotFoundResponseBody(body *HistoryNotFoundResponseBody) (err error) {
-	if body.S == nil {
-		err = goa.MergeErrors(err, goa.MissingFieldError("s", "body"))
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
 	}
-	if body.S != nil {
-		if !(*body.S == "ok" || *body.S == "error" || *body.S == "no_data") {
-			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.s", *body.S, []interface{}{"ok", "error", "no_data"}))
-		}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
 	}
 	return
 }
@@ -609,12 +1500,459 @@ func ValidateHistoryNotFoundResponseBody(body *HistoryNotFoundResponseBody) (err
 // ValidateHistoryInternalResponseBody runs the validations defined on
 // history_internal_response_body
 func ValidateHistoryInternalResponseBody(body *HistoryInternalResponseBody) (err error) {
-	if body.S == nil {
-		err = goa.MergeErrors(err, goa.MissingFieldError("s", "body"))
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
 	}
-	if body.S != nil {
-		if !(*body.S == "ok" || *body.S == "error" || *body.S == "no_data") {
-			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.s", *body.S, []interface{}{"ok", "error", "no_data"}))
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateFillsHistoryBadRequestResponseBody runs the validations defined on
+// fillsHistory_bad_request_response_body
+func ValidateFillsHistoryBadRequestResponseBody(body *FillsHistoryBadRequestResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateFillsHistoryNotFoundResponseBody runs the validations defined on
+// fillsHistory_not_found_response_body
+func ValidateFillsHistoryNotFoundResponseBody(body *FillsHistoryNotFoundResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateFillsHistoryInternalResponseBody runs the validations defined on
+// fillsHistory_internal_response_body
+func ValidateFillsHistoryInternalResponseBody(body *FillsHistoryInternalResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateMarketSummaryBadRequestResponseBody runs the validations defined on
+// marketSummary_bad_request_response_body
+func ValidateMarketSummaryBadRequestResponseBody(body *MarketSummaryBadRequestResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateMarketSummaryNotFoundResponseBody runs the validations defined on
+// marketSummary_not_found_response_body
+func ValidateMarketSummaryNotFoundResponseBody(body *MarketSummaryNotFoundResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateMarketSummaryInternalResponseBody runs the validations defined on
+// marketSummary_internal_response_body
+func ValidateMarketSummaryInternalResponseBody(body *MarketSummaryInternalResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateFuturesHistoryBadRequestResponseBody runs the validations defined on
+// futuresHistory_bad_request_response_body
+func ValidateFuturesHistoryBadRequestResponseBody(body *FuturesHistoryBadRequestResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateFuturesHistoryNotFoundResponseBody runs the validations defined on
+// futuresHistory_not_found_response_body
+func ValidateFuturesHistoryNotFoundResponseBody(body *FuturesHistoryNotFoundResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateFuturesHistoryInternalResponseBody runs the validations defined on
+// futuresHistory_internal_response_body
+func ValidateFuturesHistoryInternalResponseBody(body *FuturesHistoryInternalResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateFuturesFillsHistoryBadRequestResponseBody runs the validations
+// defined on futuresFillsHistory_bad_request_response_body
+func ValidateFuturesFillsHistoryBadRequestResponseBody(body *FuturesFillsHistoryBadRequestResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateFuturesFillsHistoryNotFoundResponseBody runs the validations defined
+// on futuresFillsHistory_not_found_response_body
+func ValidateFuturesFillsHistoryNotFoundResponseBody(body *FuturesFillsHistoryNotFoundResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateFuturesFillsHistoryInternalResponseBody runs the validations defined
+// on futuresFillsHistory_internal_response_body
+func ValidateFuturesFillsHistoryInternalResponseBody(body *FuturesFillsHistoryInternalResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateFuturesMarketSummaryBadRequestResponseBody runs the validations
+// defined on futuresMarketSummary_bad_request_response_body
+func ValidateFuturesMarketSummaryBadRequestResponseBody(body *FuturesMarketSummaryBadRequestResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateFuturesMarketSummaryNotFoundResponseBody runs the validations
+// defined on futuresMarketSummary_not_found_response_body
+func ValidateFuturesMarketSummaryNotFoundResponseBody(body *FuturesMarketSummaryNotFoundResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateFuturesMarketSummaryInternalResponseBody runs the validations
+// defined on futuresMarketSummary_internal_response_body
+func ValidateFuturesMarketSummaryInternalResponseBody(body *FuturesMarketSummaryInternalResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateFillEventResponse runs the validations defined on FillEventResponse
+func ValidateFillEventResponse(body *FillEventResponse) (err error) {
+	if body.Side == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("side", "body"))
+	}
+	if body.Ts == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("ts", "body"))
+	}
+	if body.Size == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("size", "body"))
+	}
+	if body.Filled == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("filled", "body"))
+	}
+	if body.Price == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("price", "body"))
+	}
+	if body.Side != nil {
+		if !(*body.Side == "buy" || *body.Side == "sell") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.side", *body.Side, []interface{}{"buy", "sell"}))
+		}
+	}
+	if body.TxHash != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.txHash", *body.TxHash, "^0x[0-9a-fA-F]{64}$"))
+	}
+	if body.TxHash != nil {
+		if utf8.RuneCountInString(*body.TxHash) < 66 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.txHash", *body.TxHash, utf8.RuneCountInString(*body.TxHash), 66, true))
+		}
+	}
+	if body.TxHash != nil {
+		if utf8.RuneCountInString(*body.TxHash) > 66 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.txHash", *body.TxHash, utf8.RuneCountInString(*body.TxHash), 66, false))
+		}
+	}
+	return
+}
+
+// ValidateFuturesFillEventResponse runs the validations defined on
+// FuturesFillEventResponse
+func ValidateFuturesFillEventResponse(body *FuturesFillEventResponse) (err error) {
+	if body.Side == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("side", "body"))
+	}
+	if body.Ts == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("ts", "body"))
+	}
+	if body.Size == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("size", "body"))
+	}
+	if body.Filled == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("filled", "body"))
+	}
+	if body.Price == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("price", "body"))
+	}
+	if body.Side != nil {
+		if !(*body.Side == "buy" || *body.Side == "sell") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.side", *body.Side, []interface{}{"buy", "sell"}))
+		}
+	}
+	if body.TxHash != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.txHash", *body.TxHash, "^0x[0-9a-fA-F]{64}$"))
+	}
+	if body.TxHash != nil {
+		if utf8.RuneCountInString(*body.TxHash) < 66 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.txHash", *body.TxHash, utf8.RuneCountInString(*body.TxHash), 66, true))
+		}
+	}
+	if body.TxHash != nil {
+		if utf8.RuneCountInString(*body.TxHash) > 66 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.txHash", *body.TxHash, utf8.RuneCountInString(*body.TxHash), 66, false))
 		}
 	}
 	return

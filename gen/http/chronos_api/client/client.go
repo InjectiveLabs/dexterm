@@ -25,6 +25,26 @@ type Client struct {
 	// endpoint.
 	HistoryDoer goahttp.Doer
 
+	// FillsHistory Doer is the HTTP client used to make requests to the
+	// fillsHistory endpoint.
+	FillsHistoryDoer goahttp.Doer
+
+	// MarketSummary Doer is the HTTP client used to make requests to the
+	// marketSummary endpoint.
+	MarketSummaryDoer goahttp.Doer
+
+	// FuturesHistory Doer is the HTTP client used to make requests to the
+	// futuresHistory endpoint.
+	FuturesHistoryDoer goahttp.Doer
+
+	// FuturesFillsHistory Doer is the HTTP client used to make requests to the
+	// futuresFillsHistory endpoint.
+	FuturesFillsHistoryDoer goahttp.Doer
+
+	// FuturesMarketSummary Doer is the HTTP client used to make requests to the
+	// futuresMarketSummary endpoint.
+	FuturesMarketSummaryDoer goahttp.Doer
+
 	// CORS Doer is the HTTP client used to make requests to the  endpoint.
 	CORSDoer goahttp.Doer
 
@@ -48,14 +68,19 @@ func NewClient(
 	restoreBody bool,
 ) *Client {
 	return &Client{
-		SymbolInfoDoer:      doer,
-		HistoryDoer:         doer,
-		CORSDoer:            doer,
-		RestoreResponseBody: restoreBody,
-		scheme:              scheme,
-		host:                host,
-		decoder:             dec,
-		encoder:             enc,
+		SymbolInfoDoer:           doer,
+		HistoryDoer:              doer,
+		FillsHistoryDoer:         doer,
+		MarketSummaryDoer:        doer,
+		FuturesHistoryDoer:       doer,
+		FuturesFillsHistoryDoer:  doer,
+		FuturesMarketSummaryDoer: doer,
+		CORSDoer:                 doer,
+		RestoreResponseBody:      restoreBody,
+		scheme:                   scheme,
+		host:                     host,
+		decoder:                  dec,
+		encoder:                  enc,
 	}
 }
 
@@ -102,6 +127,126 @@ func (c *Client) History() goa.Endpoint {
 		resp, err := c.HistoryDoer.Do(req)
 		if err != nil {
 			return nil, goahttp.ErrRequestError("ChronosAPI", "history", err)
+		}
+		return decodeResponse(resp)
+	}
+}
+
+// FillsHistory returns an endpoint that makes HTTP requests to the ChronosAPI
+// service fillsHistory server.
+func (c *Client) FillsHistory() goa.Endpoint {
+	var (
+		encodeRequest  = EncodeFillsHistoryRequest(c.encoder)
+		decodeResponse = DecodeFillsHistoryResponse(c.decoder, c.RestoreResponseBody)
+	)
+	return func(ctx context.Context, v interface{}) (interface{}, error) {
+		req, err := c.BuildFillsHistoryRequest(ctx, v)
+		if err != nil {
+			return nil, err
+		}
+		err = encodeRequest(req, v)
+		if err != nil {
+			return nil, err
+		}
+		resp, err := c.FillsHistoryDoer.Do(req)
+		if err != nil {
+			return nil, goahttp.ErrRequestError("ChronosAPI", "fillsHistory", err)
+		}
+		return decodeResponse(resp)
+	}
+}
+
+// MarketSummary returns an endpoint that makes HTTP requests to the ChronosAPI
+// service marketSummary server.
+func (c *Client) MarketSummary() goa.Endpoint {
+	var (
+		encodeRequest  = EncodeMarketSummaryRequest(c.encoder)
+		decodeResponse = DecodeMarketSummaryResponse(c.decoder, c.RestoreResponseBody)
+	)
+	return func(ctx context.Context, v interface{}) (interface{}, error) {
+		req, err := c.BuildMarketSummaryRequest(ctx, v)
+		if err != nil {
+			return nil, err
+		}
+		err = encodeRequest(req, v)
+		if err != nil {
+			return nil, err
+		}
+		resp, err := c.MarketSummaryDoer.Do(req)
+		if err != nil {
+			return nil, goahttp.ErrRequestError("ChronosAPI", "marketSummary", err)
+		}
+		return decodeResponse(resp)
+	}
+}
+
+// FuturesHistory returns an endpoint that makes HTTP requests to the
+// ChronosAPI service futuresHistory server.
+func (c *Client) FuturesHistory() goa.Endpoint {
+	var (
+		encodeRequest  = EncodeFuturesHistoryRequest(c.encoder)
+		decodeResponse = DecodeFuturesHistoryResponse(c.decoder, c.RestoreResponseBody)
+	)
+	return func(ctx context.Context, v interface{}) (interface{}, error) {
+		req, err := c.BuildFuturesHistoryRequest(ctx, v)
+		if err != nil {
+			return nil, err
+		}
+		err = encodeRequest(req, v)
+		if err != nil {
+			return nil, err
+		}
+		resp, err := c.FuturesHistoryDoer.Do(req)
+		if err != nil {
+			return nil, goahttp.ErrRequestError("ChronosAPI", "futuresHistory", err)
+		}
+		return decodeResponse(resp)
+	}
+}
+
+// FuturesFillsHistory returns an endpoint that makes HTTP requests to the
+// ChronosAPI service futuresFillsHistory server.
+func (c *Client) FuturesFillsHistory() goa.Endpoint {
+	var (
+		encodeRequest  = EncodeFuturesFillsHistoryRequest(c.encoder)
+		decodeResponse = DecodeFuturesFillsHistoryResponse(c.decoder, c.RestoreResponseBody)
+	)
+	return func(ctx context.Context, v interface{}) (interface{}, error) {
+		req, err := c.BuildFuturesFillsHistoryRequest(ctx, v)
+		if err != nil {
+			return nil, err
+		}
+		err = encodeRequest(req, v)
+		if err != nil {
+			return nil, err
+		}
+		resp, err := c.FuturesFillsHistoryDoer.Do(req)
+		if err != nil {
+			return nil, goahttp.ErrRequestError("ChronosAPI", "futuresFillsHistory", err)
+		}
+		return decodeResponse(resp)
+	}
+}
+
+// FuturesMarketSummary returns an endpoint that makes HTTP requests to the
+// ChronosAPI service futuresMarketSummary server.
+func (c *Client) FuturesMarketSummary() goa.Endpoint {
+	var (
+		encodeRequest  = EncodeFuturesMarketSummaryRequest(c.encoder)
+		decodeResponse = DecodeFuturesMarketSummaryResponse(c.decoder, c.RestoreResponseBody)
+	)
+	return func(ctx context.Context, v interface{}) (interface{}, error) {
+		req, err := c.BuildFuturesMarketSummaryRequest(ctx, v)
+		if err != nil {
+			return nil, err
+		}
+		err = encodeRequest(req, v)
+		if err != nil {
+			return nil, err
+		}
+		resp, err := c.FuturesMarketSummaryDoer.Do(req)
+		if err != nil {
+			return nil, goahttp.ErrRequestError("ChronosAPI", "futuresMarketSummary", err)
 		}
 		return decodeResponse(resp)
 	}

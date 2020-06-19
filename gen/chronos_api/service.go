@@ -9,6 +9,8 @@ package chronosapi
 
 import (
 	"context"
+
+	goa "goa.design/goa/v3/pkg"
 )
 
 // ChronosAPI implements historical data API for e.g. TradingView.
@@ -18,6 +20,17 @@ type Service interface {
 	// Request for history bars. Each property of the response object is treated as
 	// a table column.
 	History(context.Context, *HistoryPayload) (res *HistoryResponse, err error)
+	// Get history of past fill events, filtered by trade pair name
+	FillsHistory(context.Context, *FillsHistoryPayload) (res []*FillEvent, err error)
+	// Gets market summary for the latest interval (hour, day, month)
+	MarketSummary(context.Context, *MarketSummaryPayload) (res *MarketSummaryResponse, err error)
+	// Request for futures asset prices history bars. Each property of the response
+	// object is treated as a table column.
+	FuturesHistory(context.Context, *FuturesHistoryPayload) (res *FuturesHistoryResponse, err error)
+	// Get history of past fill events, filtered by trade pair name
+	FuturesFillsHistory(context.Context, *FuturesFillsHistoryPayload) (res []*FuturesFillEvent, err error)
+	// Gets futures market summary for the latest interval (hour, day, month)
+	FuturesMarketSummary(context.Context, *FuturesMarketSummaryPayload) (res *FuturesMarketSummaryResponse, err error)
 }
 
 // ServiceName is the name of the service as defined in the design. This is the
@@ -28,12 +41,12 @@ const ServiceName = "ChronosAPI"
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
 // MethodKey key.
-var MethodNames = [2]string{"symbolInfo", "history"}
+var MethodNames = [7]string{"symbolInfo", "history", "fillsHistory", "marketSummary", "futuresHistory", "futuresFillsHistory", "futuresMarketSummary"}
 
 // SymbolInfoPayload is the payload type of the ChronosAPI service symbolInfo
 // method.
 type SymbolInfoPayload struct {
-	// ID of a symbol group.It is only required if you use groups of symbols to
+	// ID of a symbol group. It is only required if you use groups of symbols to
 	// restrict access to instrument's data.
 	Group *string
 }
@@ -136,14 +149,14 @@ type HistoryPayload struct {
 	// ...).
 	Resolution string
 	// Unix timestamp (UTC) of the leftmost required bar, including from
-	From int
+	From *int
 	// Unix timestamp (UTC) of the rightmost required bar, including to. It can be
 	// in the future. In this case, the rightmost required bar is the latest
 	// available bar.
 	To int
 	// Number of bars (higher priority than from) starting with to. If countback is
 	// set, from should be ignored.
-	Countback int
+	Countback *int
 }
 
 // HistoryResponse is the result type of the ChronosAPI service history method.
@@ -170,20 +183,174 @@ type HistoryResponse struct {
 	V []float64
 }
 
-// Base response of TradingView API.
-type BaseChronosResponse struct {
+// FillsHistoryPayload is the payload type of the ChronosAPI service
+// fillsHistory method.
+type FillsHistoryPayload struct {
+	// Account address to get related fill events
+	Account *string
+	// Trade pair name
+	TradePair string
+}
+
+// MarketSummaryPayload is the payload type of the ChronosAPI service
+// marketSummary method.
+type MarketSummaryPayload struct {
+	// Trade pair name
+	TradePair string
+	// Specify the resolution
+	Resolution string
+}
+
+// MarketSummaryResponse is the result type of the ChronosAPI service
+// marketSummary method.
+type MarketSummaryResponse struct {
+	// Open price.
+	Open float64
+	// High price.
+	High float64
+	// Low price.
+	Low float64
+	// Volume.
+	Volume float64
+	// Current price based on latest fill event.
+	Price float64
+	// Change percent from the previous period on the same resolution.
+	Change float64
+}
+
+// FuturesHistoryPayload is the payload type of the ChronosAPI service
+// futuresHistory method.
+type FuturesHistoryPayload struct {
+	// ID of the derivative market
+	MarketID string
+	// Symbol resolution. Possible resolutions are daily (D or 1D, 2D ... ), weekly
+	// (1W, 2W ...), monthly (1M, 2M...) and an intra-day resolution – minutes(1, 2
+	// ...).
+	Resolution string
+	// Unix timestamp (UTC) of the leftmost required bar, including from
+	From *int
+	// Unix timestamp (UTC) of the rightmost required bar, including to. It can be
+	// in the future. In this case, the rightmost required bar is the latest
+	// available bar.
+	To int
+	// Number of bars (higher priority than from) starting with to. If countback is
+	// set, from should be ignored.
+	Countback *int
+}
+
+// FuturesHistoryResponse is the result type of the ChronosAPI service
+// futuresHistory method.
+type FuturesHistoryResponse struct {
 	// Status of the response.
 	S string
 	// Error message.
 	Errmsg *string
+	// Unix time of the next bar if there is no data in the requested period
+	// (optional).
+	Nb *int
+	// Bar time, Unix timestamp (UTC). Daily bars should only have the date part,
+	// time should be 0.
+	T []int
+	// Open price.
+	O []float64
+	// High price.
+	H []float64
+	// Low price.
+	L []float64
+	// Close price.
+	C []float64
+	// Volume.
+	V []float64
 }
 
-// Error returns an error description.
-func (e *BaseChronosResponse) Error() string {
-	return "Base response of TradingView API."
+// FuturesFillsHistoryPayload is the payload type of the ChronosAPI service
+// futuresFillsHistory method.
+type FuturesFillsHistoryPayload struct {
+	// Account address to get related fill events
+	Account *string
+	// Market ID of the futures pair
+	MarketID string
 }
 
-// ErrorName returns "BaseChronosResponse".
-func (e *BaseChronosResponse) ErrorName() string {
-	return "internal"
+// FuturesMarketSummaryPayload is the payload type of the ChronosAPI service
+// futuresMarketSummary method.
+type FuturesMarketSummaryPayload struct {
+	// Market ID of the futures pair
+	MarketID string
+	// Specify the resolution
+	Resolution string
+}
+
+// FuturesMarketSummaryResponse is the result type of the ChronosAPI service
+// futuresMarketSummary method.
+type FuturesMarketSummaryResponse struct {
+	// Open price.
+	Open float64
+	// High price.
+	High float64
+	// Low price.
+	Low float64
+	// Volume.
+	Volume float64
+	// Current price based on latest fill event.
+	Price float64
+	// Change percent from the previous period on the same resolution.
+	Change float64
+}
+
+type FillEvent struct {
+	// Account's side in the trade
+	Side string
+	// UNIX timestamp of the fill event
+	Ts int64
+	// Filled amount in quote currency
+	Size float64
+	// Filled amount in base currency
+	Filled float64
+	// Price in quote currency
+	Price float64
+	// Transaction hash related to this fill
+	TxHash *string
+}
+
+type FuturesFillEvent struct {
+	// Account's side in the trade
+	Side string
+	// UNIX timestamp of the fill event
+	Ts int64
+	// Filled amount in quote currency
+	Size float64
+	// Filled amount in base currency
+	Filled float64
+	// Price in quote currency
+	Price float64
+	// Transaction hash related to this fill
+	TxHash *string
+}
+
+// MakeBadRequest builds a goa.ServiceError from an error.
+func MakeBadRequest(err error) *goa.ServiceError {
+	return &goa.ServiceError{
+		Name:    "bad_request",
+		ID:      goa.NewErrorID(),
+		Message: err.Error(),
+	}
+}
+
+// MakeNotFound builds a goa.ServiceError from an error.
+func MakeNotFound(err error) *goa.ServiceError {
+	return &goa.ServiceError{
+		Name:    "not_found",
+		ID:      goa.NewErrorID(),
+		Message: err.Error(),
+	}
+}
+
+// MakeInternal builds a goa.ServiceError from an error.
+func MakeInternal(err error) *goa.ServiceError {
+	return &goa.ServiceError{
+		Name:    "internal",
+		ID:      goa.NewErrorID(),
+		Message: err.Error(),
+	}
 }

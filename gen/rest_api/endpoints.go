@@ -15,25 +15,27 @@ import (
 
 // Endpoints wraps the "RestAPI" service endpoints.
 type Endpoints struct {
-	GetActiveOrder    goa.Endpoint
-	GetArchiveOrder   goa.Endpoint
-	ListOrders        goa.Endpoint
-	GetTradePair      goa.Endpoint
-	ListTradePairs    goa.Endpoint
-	GetAccount        goa.Endpoint
-	GetOnlineAccounts goa.Endpoint
+	GetActiveOrder        goa.Endpoint
+	GetArchiveOrder       goa.Endpoint
+	ListOrders            goa.Endpoint
+	GetTradePair          goa.Endpoint
+	ListTradePairs        goa.Endpoint
+	ListDerivativeMarkets goa.Endpoint
+	GetAccount            goa.Endpoint
+	GetOnlineAccounts     goa.Endpoint
 }
 
 // NewEndpoints wraps the methods of the "RestAPI" service with endpoints.
 func NewEndpoints(s Service) *Endpoints {
 	return &Endpoints{
-		GetActiveOrder:    NewGetActiveOrderEndpoint(s),
-		GetArchiveOrder:   NewGetArchiveOrderEndpoint(s),
-		ListOrders:        NewListOrdersEndpoint(s),
-		GetTradePair:      NewGetTradePairEndpoint(s),
-		ListTradePairs:    NewListTradePairsEndpoint(s),
-		GetAccount:        NewGetAccountEndpoint(s),
-		GetOnlineAccounts: NewGetOnlineAccountsEndpoint(s),
+		GetActiveOrder:        NewGetActiveOrderEndpoint(s),
+		GetArchiveOrder:       NewGetArchiveOrderEndpoint(s),
+		ListOrders:            NewListOrdersEndpoint(s),
+		GetTradePair:          NewGetTradePairEndpoint(s),
+		ListTradePairs:        NewListTradePairsEndpoint(s),
+		ListDerivativeMarkets: NewListDerivativeMarketsEndpoint(s),
+		GetAccount:            NewGetAccountEndpoint(s),
+		GetOnlineAccounts:     NewGetOnlineAccountsEndpoint(s),
 	}
 }
 
@@ -44,6 +46,7 @@ func (e *Endpoints) Use(m func(goa.Endpoint) goa.Endpoint) {
 	e.ListOrders = m(e.ListOrders)
 	e.GetTradePair = m(e.GetTradePair)
 	e.ListTradePairs = m(e.ListTradePairs)
+	e.ListDerivativeMarkets = m(e.ListDerivativeMarkets)
 	e.GetAccount = m(e.GetAccount)
 	e.GetOnlineAccounts = m(e.GetOnlineAccounts)
 }
@@ -90,6 +93,14 @@ func NewListTradePairsEndpoint(s Service) goa.Endpoint {
 	return func(ctx context.Context, req interface{}) (interface{}, error) {
 		p := req.(*ListTradePairsPayload)
 		return s.ListTradePairs(ctx, p)
+	}
+}
+
+// NewListDerivativeMarketsEndpoint returns an endpoint function that calls the
+// method "listDerivativeMarkets" of service "RestAPI".
+func NewListDerivativeMarketsEndpoint(s Service) goa.Endpoint {
+	return func(ctx context.Context, req interface{}) (interface{}, error) {
+		return s.ListDerivativeMarkets(ctx)
 	}
 }
 

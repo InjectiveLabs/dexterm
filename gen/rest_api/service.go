@@ -27,6 +27,8 @@ type Service interface {
 	GetTradePair(context.Context, *GetTradePairPayload) (res *GetTradePairResult, err error)
 	// Retrieves a list trade pairs.
 	ListTradePairs(context.Context, *ListTradePairsPayload) (res *ListTradePairsResult, err error)
+	// Retrieves a list derivative markets.
+	ListDerivativeMarkets(context.Context) (res *ListDerivativeMarketsResult, err error)
 	// Retrieves a relayer account by address.
 	GetAccount(context.Context, *GetAccountPayload) (res *GetAccountResult, err error)
 	// Retrieves online relayer accounts only.
@@ -41,7 +43,7 @@ const ServiceName = "RestAPI"
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
 // MethodKey key.
-var MethodNames = [7]string{"getActiveOrder", "getArchiveOrder", "listOrders", "getTradePair", "listTradePairs", "getAccount", "getOnlineAccounts"}
+var MethodNames = [8]string{"getActiveOrder", "getArchiveOrder", "listOrders", "getTradePair", "listTradePairs", "listDerivativeMarkets", "getAccount", "getOnlineAccounts"}
 
 // GetActiveOrderPayload is the payload type of the RestAPI service
 // getActiveOrder method.
@@ -78,7 +80,7 @@ type GetArchiveOrderResult struct {
 	// Order item.
 	Order *Order
 	// Additional meta data.
-	MetaData interface{}
+	MetaData map[string]string
 }
 
 // ListOrdersPayload is the payload type of the RestAPI service listOrders
@@ -151,6 +153,16 @@ type ListTradePairsResult struct {
 	TradePairs []*TradePair
 	// Additional meta data.
 	MetaData interface{}
+}
+
+// ListDerivativeMarketsResult is the result type of the RestAPI service
+// listDerivativeMarkets method.
+type ListDerivativeMarketsResult struct {
+	RLimitLimit     *string
+	RLimitRemaining *string
+	RLimitReset     *string
+	// Derivative Markets.
+	Markets []*DerivativeMarket
 }
 
 // GetAccountPayload is the payload type of the RestAPI service getAccount
@@ -256,10 +268,28 @@ type TradePair struct {
 	Enabled bool
 }
 
+// An object describing a derivative market in the Injective Futures Protocol.
+type DerivativeMarket struct {
+	// Ticker for the derivative contract.
+	Ticker string
+	// Address of the oracle for the derivative contract
+	Oracle string
+	// Address of the base currency for the derivative contract
+	BaseCurrency string
+	// Random number to faciltate uniqueness of the derivative market ID
+	Nonce string
+	// MarketID identifying the market.
+	MarketID string
+	// If false, then the pair is suspended and trades cannot be made.
+	Enabled bool
+}
+
 // A relayer account that enhances Cosmos Account with liveness info.
 type RelayerAccount struct {
 	// Cosmos address of the relayer account.
 	Address string
+	// Ethereum address associated with this relayer account.
+	StakerAddress *string
 	// Public key of the relayer account, as hex string.
 	PublicKey string
 	// Timestamp in UNIX seconds of the last time seen.

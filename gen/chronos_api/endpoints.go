@@ -15,15 +15,25 @@ import (
 
 // Endpoints wraps the "ChronosAPI" service endpoints.
 type Endpoints struct {
-	SymbolInfo goa.Endpoint
-	History    goa.Endpoint
+	SymbolInfo           goa.Endpoint
+	History              goa.Endpoint
+	FillsHistory         goa.Endpoint
+	MarketSummary        goa.Endpoint
+	FuturesHistory       goa.Endpoint
+	FuturesFillsHistory  goa.Endpoint
+	FuturesMarketSummary goa.Endpoint
 }
 
 // NewEndpoints wraps the methods of the "ChronosAPI" service with endpoints.
 func NewEndpoints(s Service) *Endpoints {
 	return &Endpoints{
-		SymbolInfo: NewSymbolInfoEndpoint(s),
-		History:    NewHistoryEndpoint(s),
+		SymbolInfo:           NewSymbolInfoEndpoint(s),
+		History:              NewHistoryEndpoint(s),
+		FillsHistory:         NewFillsHistoryEndpoint(s),
+		MarketSummary:        NewMarketSummaryEndpoint(s),
+		FuturesHistory:       NewFuturesHistoryEndpoint(s),
+		FuturesFillsHistory:  NewFuturesFillsHistoryEndpoint(s),
+		FuturesMarketSummary: NewFuturesMarketSummaryEndpoint(s),
 	}
 }
 
@@ -31,6 +41,11 @@ func NewEndpoints(s Service) *Endpoints {
 func (e *Endpoints) Use(m func(goa.Endpoint) goa.Endpoint) {
 	e.SymbolInfo = m(e.SymbolInfo)
 	e.History = m(e.History)
+	e.FillsHistory = m(e.FillsHistory)
+	e.MarketSummary = m(e.MarketSummary)
+	e.FuturesHistory = m(e.FuturesHistory)
+	e.FuturesFillsHistory = m(e.FuturesFillsHistory)
+	e.FuturesMarketSummary = m(e.FuturesMarketSummary)
 }
 
 // NewSymbolInfoEndpoint returns an endpoint function that calls the method
@@ -48,5 +63,50 @@ func NewHistoryEndpoint(s Service) goa.Endpoint {
 	return func(ctx context.Context, req interface{}) (interface{}, error) {
 		p := req.(*HistoryPayload)
 		return s.History(ctx, p)
+	}
+}
+
+// NewFillsHistoryEndpoint returns an endpoint function that calls the method
+// "fillsHistory" of service "ChronosAPI".
+func NewFillsHistoryEndpoint(s Service) goa.Endpoint {
+	return func(ctx context.Context, req interface{}) (interface{}, error) {
+		p := req.(*FillsHistoryPayload)
+		return s.FillsHistory(ctx, p)
+	}
+}
+
+// NewMarketSummaryEndpoint returns an endpoint function that calls the method
+// "marketSummary" of service "ChronosAPI".
+func NewMarketSummaryEndpoint(s Service) goa.Endpoint {
+	return func(ctx context.Context, req interface{}) (interface{}, error) {
+		p := req.(*MarketSummaryPayload)
+		return s.MarketSummary(ctx, p)
+	}
+}
+
+// NewFuturesHistoryEndpoint returns an endpoint function that calls the method
+// "futuresHistory" of service "ChronosAPI".
+func NewFuturesHistoryEndpoint(s Service) goa.Endpoint {
+	return func(ctx context.Context, req interface{}) (interface{}, error) {
+		p := req.(*FuturesHistoryPayload)
+		return s.FuturesHistory(ctx, p)
+	}
+}
+
+// NewFuturesFillsHistoryEndpoint returns an endpoint function that calls the
+// method "futuresFillsHistory" of service "ChronosAPI".
+func NewFuturesFillsHistoryEndpoint(s Service) goa.Endpoint {
+	return func(ctx context.Context, req interface{}) (interface{}, error) {
+		p := req.(*FuturesFillsHistoryPayload)
+		return s.FuturesFillsHistory(ctx, p)
+	}
+}
+
+// NewFuturesMarketSummaryEndpoint returns an endpoint function that calls the
+// method "futuresMarketSummary" of service "ChronosAPI".
+func NewFuturesMarketSummaryEndpoint(s Service) goa.Endpoint {
+	return func(ctx context.Context, req interface{}) (interface{}, error) {
+		p := req.(*FuturesMarketSummaryPayload)
+		return s.FuturesMarketSummary(ctx, p)
 	}
 }

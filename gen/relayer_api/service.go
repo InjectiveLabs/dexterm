@@ -158,7 +158,7 @@ type OrderByHashResult struct {
 	// Order item.
 	Order *Order
 	// Additional meta data.
-	MetaData interface{}
+	MetaData map[string]string
 }
 
 // OrderbookPayload is the payload type of the RelayerAPI service orderbook
@@ -256,6 +256,12 @@ type SRARequest struct {
 // FeeRecipientsResult is the result type of the RelayerAPI service
 // feeRecipients method.
 type FeeRecipientsResult struct {
+	// The maximum number of requests you're permitted to make per hour.
+	RLimitLimit *int
+	// The number of requests remaining in the current rate limit window.
+	RLimitRemaining *int
+	// The time at which the current rate limit window resets in UTC epoch seconds.
+	RLimitReset *int
 	// List of all fee recipient addresses for a relayer
 	List []string
 }
@@ -341,7 +347,7 @@ type OrderRecord struct {
 	// Order item.
 	Order *Order
 	// Additional meta data.
-	MetaData interface{}
+	MetaData map[string]string
 }
 
 // A valid signed 0x order based on the schema.

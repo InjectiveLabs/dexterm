@@ -57,7 +57,7 @@ type GetArchiveOrderResponseBody struct {
 	// Order item.
 	Order *OrderResponseBody `form:"order,omitempty" json:"order,omitempty" xml:"order,omitempty"`
 	// Additional meta data.
-	MetaData interface{} `form:"metaData,omitempty" json:"metaData,omitempty" xml:"metaData,omitempty"`
+	MetaData map[string]string `form:"metaData,omitempty" json:"metaData,omitempty" xml:"metaData,omitempty"`
 }
 
 // ListOrdersResponseBody is the type of the "RestAPI" service "listOrders"
@@ -94,6 +94,16 @@ type ListTradePairsResponseBody struct {
 	TradePairs []*TradePairResponseBody `form:"tradePairs,omitempty" json:"tradePairs,omitempty" xml:"tradePairs,omitempty"`
 	// Additional meta data.
 	MetaData interface{} `form:"metaData,omitempty" json:"metaData,omitempty" xml:"metaData,omitempty"`
+}
+
+// ListDerivativeMarketsResponseBody is the type of the "RestAPI" service
+// "listDerivativeMarkets" endpoint HTTP response body.
+type ListDerivativeMarketsResponseBody struct {
+	RLimitLimit     *string `form:"rLimitLimit,omitempty" json:"rLimitLimit,omitempty" xml:"rLimitLimit,omitempty"`
+	RLimitRemaining *string `form:"rLimitRemaining,omitempty" json:"rLimitRemaining,omitempty" xml:"rLimitRemaining,omitempty"`
+	RLimitReset     *string `form:"rLimitReset,omitempty" json:"rLimitReset,omitempty" xml:"rLimitReset,omitempty"`
+	// Derivative Markets.
+	Markets []*DerivativeMarketResponseBody `form:"markets,omitempty" json:"markets,omitempty" xml:"markets,omitempty"`
 }
 
 // GetAccountResponseBody is the type of the "RestAPI" service "getAccount"
@@ -322,6 +332,37 @@ type ListTradePairsValidationErrorResponseBody struct {
 	ValidationErrors []*RESTValidationErrorResponseBody `form:"validationErrors,omitempty" json:"validationErrors,omitempty" xml:"validationErrors,omitempty"`
 }
 
+// ListDerivativeMarketsInternalResponseBody is the type of the "RestAPI"
+// service "listDerivativeMarkets" endpoint HTTP response body for the
+// "internal" error.
+type ListDerivativeMarketsInternalResponseBody struct {
+	// Name is the name of this class of errors.
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	// ID is a unique identifier for this particular occurrence of the problem.
+	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
+	// Message is a human-readable explanation specific to this occurrence of the
+	// problem.
+	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
+	// Is the error temporary?
+	Temporary *bool `form:"temporary,omitempty" json:"temporary,omitempty" xml:"temporary,omitempty"`
+	// Is the error a timeout?
+	Timeout *bool `form:"timeout,omitempty" json:"timeout,omitempty" xml:"timeout,omitempty"`
+	// Is the error a server-side fault?
+	Fault *bool `form:"fault,omitempty" json:"fault,omitempty" xml:"fault,omitempty"`
+}
+
+// ListDerivativeMarketsValidationErrorResponseBody is the type of the
+// "RestAPI" service "listDerivativeMarkets" endpoint HTTP response body for
+// the "validation_error" error.
+type ListDerivativeMarketsValidationErrorResponseBody struct {
+	// General error code
+	Code *int `form:"code,omitempty" json:"code,omitempty" xml:"code,omitempty"`
+	// Error reason description
+	Reason *string `form:"reason,omitempty" json:"reason,omitempty" xml:"reason,omitempty"`
+	// A list of explained validation errors.
+	ValidationErrors []*RESTValidationErrorResponseBody `form:"validationErrors,omitempty" json:"validationErrors,omitempty" xml:"validationErrors,omitempty"`
+}
+
 // GetAccountNotFoundResponseBody is the type of the "RestAPI" service
 // "getAccount" endpoint HTTP response body for the "not_found" error.
 type GetAccountNotFoundResponseBody struct {
@@ -473,10 +514,28 @@ type TradePairResponseBody struct {
 	Enabled *bool `form:"enabled,omitempty" json:"enabled,omitempty" xml:"enabled,omitempty"`
 }
 
+// DerivativeMarketResponseBody is used to define fields on response body types.
+type DerivativeMarketResponseBody struct {
+	// Ticker for the derivative contract.
+	Ticker *string `form:"ticker,omitempty" json:"ticker,omitempty" xml:"ticker,omitempty"`
+	// Address of the oracle for the derivative contract
+	Oracle *string `form:"oracle,omitempty" json:"oracle,omitempty" xml:"oracle,omitempty"`
+	// Address of the base currency for the derivative contract
+	BaseCurrency *string `form:"baseCurrency,omitempty" json:"baseCurrency,omitempty" xml:"baseCurrency,omitempty"`
+	// Random number to faciltate uniqueness of the derivative market ID
+	Nonce *string `form:"nonce,omitempty" json:"nonce,omitempty" xml:"nonce,omitempty"`
+	// MarketID identifying the market.
+	MarketID *string `form:"marketID,omitempty" json:"marketID,omitempty" xml:"marketID,omitempty"`
+	// If false, then the pair is suspended and trades cannot be made.
+	Enabled *bool `form:"enabled,omitempty" json:"enabled,omitempty" xml:"enabled,omitempty"`
+}
+
 // RelayerAccountResponseBody is used to define fields on response body types.
 type RelayerAccountResponseBody struct {
 	// Cosmos address of the relayer account.
 	Address *string `form:"address,omitempty" json:"address,omitempty" xml:"address,omitempty"`
+	// Ethereum address associated with this relayer account.
+	StakerAddress *string `form:"stakerAddress,omitempty" json:"stakerAddress,omitempty" xml:"stakerAddress,omitempty"`
 	// Public key of the relayer account, as hex string.
 	PublicKey *string `form:"publicKey,omitempty" json:"publicKey,omitempty" xml:"publicKey,omitempty"`
 	// Timestamp in UNIX seconds of the last time seen.
@@ -580,10 +639,13 @@ func NewGetArchiveOrderResultOK(body *GetArchiveOrderResponseBody) *restapi.GetA
 		RLimitLimit:     body.RLimitLimit,
 		RLimitRemaining: body.RLimitRemaining,
 		RLimitReset:     body.RLimitReset,
-		MetaData:        body.MetaData,
 	}
-	if body.Order != nil {
-		v.Order = unmarshalOrderResponseBodyToRestapiOrder(body.Order)
+	v.Order = unmarshalOrderResponseBodyToRestapiOrder(body.Order)
+	v.MetaData = make(map[string]string, len(body.MetaData))
+	for key, val := range body.MetaData {
+		tk := key
+		tv := val
+		v.MetaData[tk] = tv
 	}
 
 	return v
@@ -801,6 +863,56 @@ func NewListTradePairsValidationError(body *ListTradePairsValidationErrorRespons
 	return v
 }
 
+// NewListDerivativeMarketsResultOK builds a "RestAPI" service
+// "listDerivativeMarkets" endpoint result from a HTTP "OK" response.
+func NewListDerivativeMarketsResultOK(body *ListDerivativeMarketsResponseBody) *restapi.ListDerivativeMarketsResult {
+	v := &restapi.ListDerivativeMarketsResult{
+		RLimitLimit:     body.RLimitLimit,
+		RLimitRemaining: body.RLimitRemaining,
+		RLimitReset:     body.RLimitReset,
+	}
+	if body.Markets != nil {
+		v.Markets = make([]*restapi.DerivativeMarket, len(body.Markets))
+		for i, val := range body.Markets {
+			v.Markets[i] = unmarshalDerivativeMarketResponseBodyToRestapiDerivativeMarket(val)
+		}
+	}
+
+	return v
+}
+
+// NewListDerivativeMarketsInternal builds a RestAPI service
+// listDerivativeMarkets endpoint internal error.
+func NewListDerivativeMarketsInternal(body *ListDerivativeMarketsInternalResponseBody) *goa.ServiceError {
+	v := &goa.ServiceError{
+		Name:      *body.Name,
+		ID:        *body.ID,
+		Message:   *body.Message,
+		Temporary: *body.Temporary,
+		Timeout:   *body.Timeout,
+		Fault:     *body.Fault,
+	}
+
+	return v
+}
+
+// NewListDerivativeMarketsValidationError builds a RestAPI service
+// listDerivativeMarkets endpoint validation_error error.
+func NewListDerivativeMarketsValidationError(body *ListDerivativeMarketsValidationErrorResponseBody) *restapi.RESTValidationErrorResponse {
+	v := &restapi.RESTValidationErrorResponse{
+		Code:   *body.Code,
+		Reason: *body.Reason,
+	}
+	if body.ValidationErrors != nil {
+		v.ValidationErrors = make([]*restapi.RESTValidationError, len(body.ValidationErrors))
+		for i, val := range body.ValidationErrors {
+			v.ValidationErrors[i] = unmarshalRESTValidationErrorResponseBodyToRestapiRESTValidationError(val)
+		}
+	}
+
+	return v
+}
+
 // NewGetAccountResultOK builds a "RestAPI" service "getAccount" endpoint
 // result from a HTTP "OK" response.
 func NewGetAccountResultOK(body *GetAccountResponseBody) *restapi.GetAccountResult {
@@ -929,6 +1041,12 @@ func ValidateGetActiveOrderResponseBody(body *GetActiveOrderResponseBody) (err e
 // ValidateGetArchiveOrderResponseBody runs the validations defined on
 // GetArchiveOrderResponseBody
 func ValidateGetArchiveOrderResponseBody(body *GetArchiveOrderResponseBody) (err error) {
+	if body.Order == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("order", "body"))
+	}
+	if body.MetaData == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("metaData", "body"))
+	}
 	if body.Order != nil {
 		if err2 := ValidateOrderResponseBody(body.Order); err2 != nil {
 			err = goa.MergeErrors(err, err2)
@@ -967,6 +1085,19 @@ func ValidateListTradePairsResponseBody(body *ListTradePairsResponseBody) (err e
 	for _, e := range body.TradePairs {
 		if e != nil {
 			if err2 := ValidateTradePairResponseBody(e); err2 != nil {
+				err = goa.MergeErrors(err, err2)
+			}
+		}
+	}
+	return
+}
+
+// ValidateListDerivativeMarketsResponseBody runs the validations defined on
+// ListDerivativeMarketsResponseBody
+func ValidateListDerivativeMarketsResponseBody(body *ListDerivativeMarketsResponseBody) (err error) {
+	for _, e := range body.Markets {
+		if e != nil {
+			if err2 := ValidateDerivativeMarketResponseBody(e); err2 != nil {
 				err = goa.MergeErrors(err, err2)
 			}
 		}
@@ -1335,6 +1466,59 @@ func ValidateListTradePairsValidationErrorResponseBody(body *ListTradePairsValid
 	return
 }
 
+// ValidateListDerivativeMarketsInternalResponseBody runs the validations
+// defined on listDerivativeMarkets_internal_response_body
+func ValidateListDerivativeMarketsInternalResponseBody(body *ListDerivativeMarketsInternalResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.ID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
+	}
+	if body.Message == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("message", "body"))
+	}
+	if body.Temporary == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("temporary", "body"))
+	}
+	if body.Timeout == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("timeout", "body"))
+	}
+	if body.Fault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("fault", "body"))
+	}
+	return
+}
+
+// ValidateListDerivativeMarketsValidationErrorResponseBody runs the
+// validations defined on listDerivativeMarkets_validation_error_response_body
+func ValidateListDerivativeMarketsValidationErrorResponseBody(body *ListDerivativeMarketsValidationErrorResponseBody) (err error) {
+	if body.Code == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("code", "body"))
+	}
+	if body.Reason == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("reason", "body"))
+	}
+	if body.Code != nil {
+		if !(*body.Code == 100 || *body.Code == 101 || *body.Code == 102 || *body.Code == 103) {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.code", *body.Code, []interface{}{100, 101, 102, 103}))
+		}
+	}
+	if body.Reason != nil {
+		if !(*body.Reason == "Validation Failed" || *body.Reason == "Malformed JSON" || *body.Reason == "Order submission disabled" || *body.Reason == "Throttled") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.reason", *body.Reason, []interface{}{"Validation Failed", "Malformed JSON", "Order submission disabled", "Throttled"}))
+		}
+	}
+	for _, e := range body.ValidationErrors {
+		if e != nil {
+			if err2 := ValidateRESTValidationErrorResponseBody(e); err2 != nil {
+				err = goa.MergeErrors(err, err2)
+			}
+		}
+	}
+	return
+}
+
 // ValidateGetAccountNotFoundResponseBody runs the validations defined on
 // getAccount_not_found_response_body
 func ValidateGetAccountNotFoundResponseBody(body *GetAccountNotFoundResponseBody) (err error) {
@@ -1519,8 +1703,8 @@ func ValidateOrderResponseBody(body *OrderResponseBody) (err error) {
 		err = goa.MergeErrors(err, goa.MissingFieldError("signature", "body"))
 	}
 	if body.ChainID != nil {
-		if !(*body.ChainID == 1 || *body.ChainID == 42 || *body.ChainID == 3 || *body.ChainID == 4 || *body.ChainID == 1337) {
-			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.chainId", *body.ChainID, []interface{}{1, 42, 3, 4, 1337}))
+		if !(*body.ChainID == 1 || *body.ChainID == 3 || *body.ChainID == 4 || *body.ChainID == 42 || *body.ChainID == 1337 || *body.ChainID == 15001) {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("body.chainId", *body.ChainID, []interface{}{1, 3, 4, 42, 1337, 15001}))
 		}
 	}
 	if body.ExchangeAddress != nil {
@@ -1776,6 +1960,69 @@ func ValidateTradePairResponseBody(body *TradePairResponseBody) (err error) {
 	return
 }
 
+// ValidateDerivativeMarketResponseBody runs the validations defined on
+// DerivativeMarketResponseBody
+func ValidateDerivativeMarketResponseBody(body *DerivativeMarketResponseBody) (err error) {
+	if body.Ticker == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("ticker", "body"))
+	}
+	if body.Oracle == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("oracle", "body"))
+	}
+	if body.BaseCurrency == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("baseCurrency", "body"))
+	}
+	if body.Nonce == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("nonce", "body"))
+	}
+	if body.MarketID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("marketID", "body"))
+	}
+	if body.Enabled == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("enabled", "body"))
+	}
+	if body.Oracle != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.oracle", *body.Oracle, "^0x[0-9a-fA-F]{40}$"))
+	}
+	if body.Oracle != nil {
+		if utf8.RuneCountInString(*body.Oracle) < 42 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.oracle", *body.Oracle, utf8.RuneCountInString(*body.Oracle), 42, true))
+		}
+	}
+	if body.Oracle != nil {
+		if utf8.RuneCountInString(*body.Oracle) > 42 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.oracle", *body.Oracle, utf8.RuneCountInString(*body.Oracle), 42, false))
+		}
+	}
+	if body.BaseCurrency != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.baseCurrency", *body.BaseCurrency, "^0x[0-9a-fA-F]{40}$"))
+	}
+	if body.BaseCurrency != nil {
+		if utf8.RuneCountInString(*body.BaseCurrency) < 42 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.baseCurrency", *body.BaseCurrency, utf8.RuneCountInString(*body.BaseCurrency), 42, true))
+		}
+	}
+	if body.BaseCurrency != nil {
+		if utf8.RuneCountInString(*body.BaseCurrency) > 42 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.baseCurrency", *body.BaseCurrency, utf8.RuneCountInString(*body.BaseCurrency), 42, false))
+		}
+	}
+	if body.MarketID != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.marketID", *body.MarketID, "^0x[0-9a-fA-F]{64}$"))
+	}
+	if body.MarketID != nil {
+		if utf8.RuneCountInString(*body.MarketID) < 66 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.marketID", *body.MarketID, utf8.RuneCountInString(*body.MarketID), 66, true))
+		}
+	}
+	if body.MarketID != nil {
+		if utf8.RuneCountInString(*body.MarketID) > 66 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.marketID", *body.MarketID, utf8.RuneCountInString(*body.MarketID), 66, false))
+		}
+	}
+	return
+}
+
 // ValidateRelayerAccountResponseBody runs the validations defined on
 // RelayerAccountResponseBody
 func ValidateRelayerAccountResponseBody(body *RelayerAccountResponseBody) (err error) {
@@ -1805,6 +2052,19 @@ func ValidateRelayerAccountResponseBody(body *RelayerAccountResponseBody) (err e
 	if body.Address != nil {
 		if utf8.RuneCountInString(*body.Address) > 45 {
 			err = goa.MergeErrors(err, goa.InvalidLengthError("body.address", *body.Address, utf8.RuneCountInString(*body.Address), 45, false))
+		}
+	}
+	if body.StakerAddress != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.stakerAddress", *body.StakerAddress, "^0x[0-9a-fA-F]{40}$"))
+	}
+	if body.StakerAddress != nil {
+		if utf8.RuneCountInString(*body.StakerAddress) < 42 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.stakerAddress", *body.StakerAddress, utf8.RuneCountInString(*body.StakerAddress), 42, true))
+		}
+	}
+	if body.StakerAddress != nil {
+		if utf8.RuneCountInString(*body.StakerAddress) > 42 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.stakerAddress", *body.StakerAddress, utf8.RuneCountInString(*body.StakerAddress), 42, false))
 		}
 	}
 	if body.PublicKey != nil {
