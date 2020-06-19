@@ -1325,7 +1325,13 @@ func (ctl *AppController) getTokenNamesAndAssets(ctx context.Context) (tokenName
 		return tokenNames, assets, err
 	}
 
-	tokenMap := make(map[string]common.Address, len(pairs))
+	markets, err := ctl.restClient.DerivativeMarkets(ctx)
+	if err != nil {
+		logrus.WithError(err).Errorln("unable to fetch trade pairs")
+		return
+	}
+
+	tokenMap := make(map[string]common.Address, len(pairs) + len(markets))
 
 	for _, pair := range pairs {
 		parts := strings.Split(pair.Name, "/")
@@ -1335,6 +1341,10 @@ func (ctl *AppController) getTokenNamesAndAssets(ctx context.Context) (tokenName
 
 		tokenMap[parts[0]] = common.HexToAddress("0x" + pair.MakerAssetData[len(pair.MakerAssetData)-40:])
 		tokenMap[parts[1]] = common.HexToAddress("0x" + pair.TakerAssetData[len(pair.TakerAssetData)-40:])
+	}
+
+	for _, market := range markets {
+		tokenMap[market.Ticker] = common.HexToAddress(market.BaseCurrency)
 	}
 
 	if ctl.ethCore != nil {
@@ -1354,6 +1364,9 @@ func (ctl *AppController) getTokenNamesAndAssets(ctx context.Context) (tokenName
 	for _, name := range tokenNames {
 		assets = append(assets, tokenMap[name])
 	}
+
+
+
 
 	return tokenNames, assets, nil
 }
