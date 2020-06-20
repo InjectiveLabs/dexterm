@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/InjectiveLabs/zeroex-go/wrappers"
 	"golang.org/x/crypto/sha3"
 	"math/big"
 	"os"
@@ -1153,6 +1154,33 @@ type DerivativeOrderbookArgs struct {
 	Market string
 }
 
+func so2wo(o *sraAPI.Order) (wrappers.Order, []byte) {
+	makerAmountDec, _ := decimal.NewFromString(o.MakerAssetAmount)
+	takerAmountDec, _ := decimal.NewFromString(o.TakerAssetAmount)
+	makerFee, _ := decimal.NewFromString(o.MakerFee)
+	takerFee, _ := decimal.NewFromString(o.TakerFee)
+	expirationTimeSeconds, _ := decimal.NewFromString(o.ExpirationTimeSeconds)
+	salt, _ := decimal.NewFromString(o.Salt)
+	wrappedOrder := wrappers.Order{
+		MakerAddress:          common.HexToAddress(o.MakerAddress),
+		TakerAddress:          common.HexToAddress(o.TakerAddress),
+		FeeRecipientAddress:   common.HexToAddress(o.FeeRecipientAddress),
+		SenderAddress:         common.HexToAddress(o.SenderAddress),
+		MakerAssetAmount:      dec2big(makerAmountDec),
+		TakerAssetAmount:      dec2big(takerAmountDec),
+		MakerFee:              dec2big(makerFee),
+		TakerFee:              dec2big(takerFee),
+		ExpirationTimeSeconds: dec2big(expirationTimeSeconds),
+		Salt:                  dec2big(salt),
+		MakerAssetData:        common.FromHex(o.MakerAssetData),
+		TakerAssetData:        common.FromHex(o.TakerAssetData),
+		MakerFeeAssetData:     common.FromHex(o.MakerFeeAssetData),
+		TakerFeeAssetData:     common.FromHex(o.TakerFeeAssetData),
+	}
+	return wrappedOrder, common.FromHex(o.Signature)
+}
+
+
 func (ctl *AppController) ActionDerivativesOrderbook(args interface{}) {
 	derivativeOrderbookArgs := args.(*DerivativeOrderbookArgs)
 
@@ -1177,6 +1205,52 @@ func (ctl *AppController) ActionDerivativesOrderbook(args interface{}) {
 		return
 	}
 
+	bidOrders := make([]wrappers.Order, len(bids))
+	bidSignatures := make([][]byte, len(bids))
+
+	for idx, bid := range bids {
+		bidOrders[idx], bidSignatures[idx] = so2wo(bid.Order)
+	}
+
+
+	bidStates, err := ctl.ethCore.GetOrderRelevantStates(ctx, bidOrders, bidSignatures)
+
+
+
+	logrus.Info("========= BIDS ======")
+	for idx, fillable := range bidStates.FillableTakerAssetAmounts {
+		bids[idx].MetaData["fillableTakerAssetAmount"] = fillable.String()
+		logrus.Info("Contracts: ", bids[idx].Order.TakerAssetAmount)
+		logrus.Info("Filled: ", bidStates.OrdersInfo[idx].OrderTakerAssetFilledAmount.String())
+		logrus.Info("fillableTakerAssetAmount?: ", fillable.String())
+		amount, _ := ctl.ethCore.GetTransferableAssetAmount(ctx, common.HexToAddress(bids[idx].Order.MakerAddress))
+		logrus.Info("Transferrable: ", amount.String())
+	}
+
+
+
+
+	askOrders := make([]wrappers.Order, len(asks))
+	askSignatures := make([][]byte, len(asks))
+
+	for idx, ask := range asks {
+		askOrders[idx], askSignatures[idx] = so2wo(ask.Order)
+	}
+	logrus.Info("========= ASKS ======")
+
+	askStates, err := ctl.ethCore.GetOrderRelevantStates(ctx, askOrders, askSignatures)
+
+	for idx, fillable := range askStates.FillableTakerAssetAmounts {
+		asks[idx].MetaData["fillableTakerAssetAmount"] = fillable.String()
+		logrus.Info("Contracts: ", asks[idx].Order.TakerAssetAmount)
+		logrus.Info("Filled: ", askStates.OrdersInfo[idx].OrderTakerAssetFilledAmount.String())
+		logrus.Info("fillableTakerAssetAmount?: ", fillable.String())
+		amount, _ := ctl.ethCore.GetTransferableAssetAmount(ctx, common.HexToAddress(asks[idx].Order.MakerAddress))
+		logrus.Info("Transferrable: ", amount.String())
+
+	}
+	//logrus.Info(bidStates.FillableTakerAssetAmounts)
+	//logrus.Info(askStates.FillableTakerAssetAmounts)
 
 	table := termtables.CreateTable()
 	table.UTF8Box()
@@ -1197,8 +1271,10 @@ func (ctl *AppController) ActionDerivativesOrderbook(args interface{}) {
 			}
 
 			price := decimal.RequireFromString(ask.Order.MakerAssetAmount).Truncate(9).Shift(-18).String()
-			quantity := decimal.RequireFromString(ask.Order.TakerAssetAmount)
-
+			quantity := decimal.RequireFromString(ask.MetaData["fillableTakerAssetAmount"])
+			if quantity.IsZero(){
+				continue
+			}
 			table.AddRow(
 				color.RedString("%s", price),
 				color.RedString("%s", quantity),
@@ -1219,8 +1295,10 @@ func (ctl *AppController) ActionDerivativesOrderbook(args interface{}) {
 			}
 
 			price := decimal.RequireFromString(bid.Order.MakerAssetAmount).Truncate(9).Shift(-18).String()
-			quantity := decimal.RequireFromString(bid.Order.TakerAssetAmount)
-
+			quantity := decimal.RequireFromString(bid.MetaData["fillableTakerAssetAmount"])
+			if quantity.IsZero(){
+				continue
+			}
 			table.AddRow(
 				color.GreenString("%s", price),
 				color.GreenString("%s", quantity),

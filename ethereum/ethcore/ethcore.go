@@ -45,6 +45,7 @@ type EthClient struct {
 	ercWrappersMux *sync.RWMutex
 	weth9          *wrappers.WETH9
 	coordinator    *wrappers.Coordinator
+	futures        *wrappers.Futures
 }
 
 type EthContract string
@@ -143,6 +144,12 @@ func (cli *EthClient) initContractWrappers() error {
 	}
 	cli.coordinator = coordinator
 
+	futures, err := wrappers.NewFutures(cli.contractAddresses[EthContractFutures], cli.ethManager)
+	if err != nil {
+		err = errors.Wrap(err, "failed to init Futures contract wrapper")
+		return err
+	}
+	cli.futures = futures
 	return nil
 }
 
@@ -632,8 +639,35 @@ func (cli *EthClient) CreateAndSignDerivativesOrder(
 		Salt:                  cli.nextSalt(),
 	}
 
-
 	return cli.SignOrder(call, order)
+}
+
+
+func (cli *EthClient) GetOrderRelevantStates(
+	ctx context.Context,
+	orders []wrappers.Order,
+	signatures [][]byte,
+) (struct {
+	OrdersInfo                []wrappers.OrderInfo
+	FillableTakerAssetAmounts []*big.Int
+	IsValidSignature          []bool
+}, error) {
+
+	opts := &bind.CallOpts{
+		Context: ctx,
+	}
+	return cli.futures.GetOrderRelevantStates(opts, orders, signatures)
+}
+
+func (cli *EthClient) GetTransferableAssetAmount(
+	ctx context.Context,
+	ownerAddress common.Address,
+) (amount *big.Int, err error) {
+
+	opts := &bind.CallOpts{
+		Context: ctx,
+	}
+	return cli.futures.GetTransferableAssetAmount(opts, ownerAddress)
 }
 
 func (cli *EthClient) chainID() *big.Int {
