@@ -603,10 +603,12 @@ func (cli *EthClient) CreateAndSignDerivativesOrder(
 	makerAssetAmount, takerAssetAmount *big.Int, isLong bool,
 ) (*zeroex.SignedOrder, error) {
 
-	direction := big.NewInt(1)
-	if !isLong {
-		direction = big.NewInt(2)
-	}
+	//direction := big.NewInt(1)
+	//if !isLong {
+	//	direction = big.NewInt(2)
+	//}
+	// TODO: change from just 1x leverage
+	margin := big.NewInt(0).Mul(makerAssetAmount, takerAssetAmount)
 
 	zeroAssetBytes := common.FromHex("0x000000000000000000000000000000000000000000000000000000000000000000000000")
 	order := &zeroex.Order{
@@ -616,7 +618,7 @@ func (cli *EthClient) CreateAndSignDerivativesOrder(
 		MakerAssetData:      makerAssetData,
 		MakerFeeAssetData:   zeroAssetBytes,
 		MakerAssetAmount:    makerAssetAmount,
-		MakerFee:            direction,
+		MakerFee:            margin,
 		TakerAddress:        common.Address{},
 		TakerAssetData:      takerAssetData,
 		TakerFeeAssetData:   zeroAssetBytes,
