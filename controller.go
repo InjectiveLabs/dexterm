@@ -1214,21 +1214,23 @@ func (ctl *AppController) ActionDerivativesOrderbook(args interface{}) {
 
 
 	bidStates, err := ctl.ethCore.GetOrderRelevantStates(ctx, bidOrders, bidSignatures)
-
-
-
+	orderStatus := map[uint8]string{
+		0: "INVALID",
+		1: "INVALID_MAKER_ASSET_AMOUNT",
+		2: "INVALID_TAKER_ASSET_AMOUNT",
+		3: "FILLABLE",
+		4: "EXPIRED",
+		5: "FULLY_FILLED",
+		6: "CANCELLED",
+	}
 	logrus.Info("========= BIDS ======")
 	for idx, fillable := range bidStates.FillableTakerAssetAmounts {
 		bids[idx].MetaData["fillableTakerAssetAmount"] = fillable.String()
-		logrus.Info("Contracts: ", bids[idx].Order.TakerAssetAmount)
-		logrus.Info("Filled: ", bidStates.OrdersInfo[idx].OrderTakerAssetFilledAmount.String())
-		logrus.Info("fillableTakerAssetAmount?: ", fillable.String())
-		amount, _ := ctl.ethCore.GetTransferableAssetAmount(ctx, common.HexToAddress(bids[idx].Order.MakerAddress))
-		logrus.Info("Transferrable: ", amount.String())
+		transferrableAmount, _ := ctl.ethCore.GetTransferableAssetAmount(ctx, common.HexToAddress(bids[idx].Order.MakerAddress))
+		logrus.Info("Order Status: ", orderStatus[bidStates.OrdersInfo[idx].OrderStatus], "\tTransferrable: ", transferrableAmount.String())
+		logrus.Info(bidStates.OrdersInfo[idx].OrderTakerAssetFilledAmount.String(), "/", bids[idx].Order.TakerAssetAmount, " contracts filled")
+		logrus.Info("Fillable: ", fillable.String())
 	}
-
-
-
 
 	askOrders := make([]wrappers.Order, len(asks))
 	askSignatures := make([][]byte, len(asks))
@@ -1240,14 +1242,13 @@ func (ctl *AppController) ActionDerivativesOrderbook(args interface{}) {
 
 	askStates, err := ctl.ethCore.GetOrderRelevantStates(ctx, askOrders, askSignatures)
 
+
 	for idx, fillable := range askStates.FillableTakerAssetAmounts {
 		asks[idx].MetaData["fillableTakerAssetAmount"] = fillable.String()
-		logrus.Info("Contracts: ", asks[idx].Order.TakerAssetAmount)
-		logrus.Info("Filled: ", askStates.OrdersInfo[idx].OrderTakerAssetFilledAmount.String())
-		logrus.Info("fillableTakerAssetAmount?: ", fillable.String())
-		amount, _ := ctl.ethCore.GetTransferableAssetAmount(ctx, common.HexToAddress(asks[idx].Order.MakerAddress))
-		logrus.Info("Transferrable: ", amount.String())
-
+		transferrableAmount, _ := ctl.ethCore.GetTransferableAssetAmount(ctx, common.HexToAddress(asks[idx].Order.MakerAddress))
+		logrus.Info("Order Status: ", orderStatus[askStates.OrdersInfo[idx].OrderStatus], "\tTransferrable: ", transferrableAmount.String())
+		logrus.Info(askStates.OrdersInfo[idx].OrderTakerAssetFilledAmount.String(), "/", asks[idx].Order.TakerAssetAmount, " contracts filled")
+		logrus.Info("Fillable: ", fillable.String())
 	}
 	//logrus.Info(bidStates.FillableTakerAssetAmounts)
 	//logrus.Info(askStates.FillableTakerAssetAmounts)

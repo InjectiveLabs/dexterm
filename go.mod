@@ -3,7 +3,7 @@ module github.com/InjectiveLabs/dexterm
 go 1.13
 
 require (
-	github.com/InjectiveLabs/zeroex-go v1.7.3
+	github.com/InjectiveLabs/zeroex-go v1.7.7
 	github.com/c-bata/go-prompt v0.2.3
 	github.com/ethereum/go-ethereum v1.9.13
 	github.com/fatih/color v1.9.0
