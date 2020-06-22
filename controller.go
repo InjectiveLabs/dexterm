@@ -1156,12 +1156,12 @@ type DerivativeOrderbookArgs struct {
 
 
 func so2wo(o *sraAPI.Order) (wrappers.Order, []byte) {
-	takerFee, _ := decimal.NewFromString(o.TakerFee)
-	expirationTimeSeconds, _ := decimal.NewFromString(o.ExpirationTimeSeconds)
-	salt, _ := decimal.NewFromString(o.Salt)
 	makerAssetAmount, _ := big.NewInt(0).SetString(o.MakerAssetAmount, 10)
 	quantity, _ := big.NewInt(0).SetString(o.TakerAssetAmount, 10)
 	makerFee, _ := big.NewInt(0).SetString(o.MakerFee, 10)
+	takerFee, _ := big.NewInt(0).SetString(o.TakerFee, 10)
+	expirationTimeSeconds, _ := big.NewInt(0).SetString(o.ExpirationTimeSeconds, 10)
+	salt, _ := big.NewInt(0).SetString(o.Salt, 10)
 	wrappedOrder := wrappers.Order{
 		MakerAddress:          common.HexToAddress(o.MakerAddress),
 		TakerAddress:          common.HexToAddress(o.TakerAddress),
@@ -1170,9 +1170,9 @@ func so2wo(o *sraAPI.Order) (wrappers.Order, []byte) {
 		MakerAssetAmount:      makerAssetAmount,
 		TakerAssetAmount:      quantity,
 		MakerFee:              makerFee,
-		TakerFee:              dec2big(takerFee),
-		ExpirationTimeSeconds: dec2big(expirationTimeSeconds),
-		Salt:                  dec2big(salt),
+		TakerFee:              takerFee,
+		ExpirationTimeSeconds: expirationTimeSeconds,
+		Salt:                  salt,
 		MakerAssetData:        common.FromHex(o.MakerAssetData),
 		TakerAssetData:        common.FromHex(o.TakerAssetData),
 		MakerFeeAssetData:     common.FromHex(o.MakerFeeAssetData),
