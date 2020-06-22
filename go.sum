@@ -36,6 +36,8 @@ github.com/InjectiveLabs/zeroex-go v1.7.6 h1:SkO/RqB4z91k1+dViIovPd9GpmGbCzmJD4v
 github.com/InjectiveLabs/zeroex-go v1.7.6/go.mod h1:yyfrPO/v5KVUaXHCAgvUDOSPVdaDl/WfxxPOcjovq/o=
 github.com/InjectiveLabs/zeroex-go v1.7.7 h1:PcmzCb2amLlyJG9+72hycyfpr23tLpz2LQ6Cr0L7oyQ=
 github.com/InjectiveLabs/zeroex-go v1.7.7/go.mod h1:yyfrPO/v5KVUaXHCAgvUDOSPVdaDl/WfxxPOcjovq/o=
+github.com/InjectiveLabs/zeroex-go v1.7.8 h1:bvN5Gw5b3Z5aH8vu5dZBORDgMkR1X+30wOo1t4wPlW8=
+github.com/InjectiveLabs/zeroex-go v1.7.8/go.mod h1:yyfrPO/v5KVUaXHCAgvUDOSPVdaDl/WfxxPOcjovq/o=
 github.com/Knetic/govaluate v3.0.1-0.20171022003610-9aa49832a739+incompatible/go.mod h1:r7JcOSlj0wfOMncg0iLm8Leh48TZaKVeNIfJntJ2wa0=
 github.com/OneOfOne/xxhash v1.2.2/go.mod h1:HSdplMjZKSmBqAxg5vPj2TmRDmfkzw+cTzAElWljhcU=
 github.com/OneOfOne/xxhash v1.2.5/go.mod h1:eZbhyaAYD41SGSSsnmcpxVoRiQ/MPUTjUdIIOT9Um7Q=

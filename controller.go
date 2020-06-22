@@ -1154,21 +1154,22 @@ type DerivativeOrderbookArgs struct {
 	Market string
 }
 
+
 func so2wo(o *sraAPI.Order) (wrappers.Order, []byte) {
-	makerAmountDec, _ := decimal.NewFromString(o.MakerAssetAmount)
-	takerAmountDec, _ := decimal.NewFromString(o.TakerAssetAmount)
-	makerFee, _ := decimal.NewFromString(o.MakerFee)
 	takerFee, _ := decimal.NewFromString(o.TakerFee)
 	expirationTimeSeconds, _ := decimal.NewFromString(o.ExpirationTimeSeconds)
 	salt, _ := decimal.NewFromString(o.Salt)
+	makerAssetAmount, _ := big.NewInt(0).SetString(o.MakerAssetAmount, 10)
+	quantity, _ := big.NewInt(0).SetString(o.TakerAssetAmount, 10)
+	makerFee, _ := big.NewInt(0).SetString(o.MakerFee, 10)
 	wrappedOrder := wrappers.Order{
 		MakerAddress:          common.HexToAddress(o.MakerAddress),
 		TakerAddress:          common.HexToAddress(o.TakerAddress),
 		FeeRecipientAddress:   common.HexToAddress(o.FeeRecipientAddress),
 		SenderAddress:         common.HexToAddress(o.SenderAddress),
-		MakerAssetAmount:      dec2big(makerAmountDec),
-		TakerAssetAmount:      dec2big(takerAmountDec),
-		MakerFee:              dec2big(makerFee),
+		MakerAssetAmount:      makerAssetAmount,
+		TakerAssetAmount:      quantity,
+		MakerFee:              makerFee,
 		TakerFee:              dec2big(takerFee),
 		ExpirationTimeSeconds: dec2big(expirationTimeSeconds),
 		Salt:                  dec2big(salt),
