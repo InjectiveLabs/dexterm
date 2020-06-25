@@ -1215,6 +1215,9 @@ func (ctl *AppController) ActionDerivativesOrderbook(args interface{}) {
 
 
 	bidStates, err := ctl.ethCore.GetOrderRelevantStates(ctx, bidOrders, bidSignatures)
+	if err != nil {
+		logrus.Error(err)
+	}
 	orderStatus := map[uint8]string{
 		0: "INVALID",
 		1: "INVALID_MAKER_ASSET_AMOUNT",
