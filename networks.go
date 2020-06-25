@@ -298,7 +298,7 @@ var (
 		Name:      "devnet-endpoint",
 		Desc:      "Specify endpoint for Ganache network",
 		EnvVar:    "DEXTERM_DEVNET_ENDPOINT",
-		Value:     "http://localhost:8545",
+		Value:     "https://evm-rpc.injective.dev",
 		SetByUser: &networksDevnetEndpointSet,
 	}
 )
@@ -342,7 +342,8 @@ var (
 		Name:      "devnet-erc20proxy",
 		Desc:      "Specify address of 0x ERC20Proxy contract on Ganache network",
 		EnvVar:    "DEXTERM_DEVNET_ERC20PROXY",
-		Value:     "0x1dc4c1cefef38a777b15aa20260a54e584b16c48",
+		Value:     "0x87fcda8109382e8d8591f06fb96db4a34b3f0cb4", // TODO: THIS IS currently the futures contract address but this should be made separate in the future.
+		//Value:     "0x1dc4c1cefef38a777b15aa20260a54e584b16c48", // THIS IS THE REAL 0x ERC-20 PROXY, commented out to approve to futures contract
 		SetByUser: &networksDevnetERC20ProxySet,
 	}
 )
@@ -364,7 +365,7 @@ var (
 		Name:      "devnet-futures",
 		Desc:      "Specify address of Futures contract on Ganache network",
 		EnvVar:    "DEXTERM_DEVNET_FUTURES",
-		Value:     "0x48bacb9266a570d521063ef5dd96e61686dbe788",
+		Value:     "0x87fcda8109382e8d8591f06fb96db4a34b3f0cb4",
 		SetByUser: &networksDevnetFuturesSet,
 	}
 )
@@ -381,12 +382,102 @@ var (
 )
 
 var (
+	networksInjectiveEndpointSet bool
+	networksInjectiveEndpointOpt = cli.StringOpt{
+		Name:      "injective-endpoint",
+		Desc:      "Specify endpoint for Ganache network",
+		EnvVar:    "DEXTERM_INJECTIVE_ENDPOINT",
+		Value:     "https://evm-rpc.injective.dev",
+		SetByUser: &networksInjectiveEndpointSet,
+	}
+)
+
+var (
+	networksInjectiveExplorerSet bool
+	networksInjectiveExplorerOpt = cli.StringOpt{
+		Name:      "injective-explorer",
+		Desc:      "Specify explorer prefix for transactions on Ganache network",
+		EnvVar:    "DEXTERM_INJECTIVE_EXPLORER",
+		Value:     "",
+		SetByUser: &networksInjectiveExplorerSet,
+	}
+)
+
+var (
+	networksInjectiveGasPriceSet bool
+	networksInjectiveGasPriceOpt = cli.StringOpt{
+		Name:      "injective-gasprice",
+		Desc:      "Specify min gasprice for Ganache network",
+		EnvVar:    "DEXTERM_INJECTIVE_GASPRICE",
+		Value:     "10000000000",
+		SetByUser: &networksInjectiveGasPriceSet,
+	}
+)
+
+var (
+	networksInjectiveWETH9Set bool
+	networksInjectiveWETH9Opt = cli.StringOpt{
+		Name:      "injective-weth9",
+		Desc:      "Specify address of 0x WETH9 contract on Ganache network",
+		EnvVar:    "DEXTERM_INJECTIVE_WETH9",
+		Value:     "0x0b1ba0af832d7c05fd64161e0db78e85978e8082",
+		SetByUser: &networksInjectiveWETH9Set,
+	}
+)
+
+var (
+	networksInjectiveERC20ProxySet bool
+	networksInjectiveERC20ProxyOpt = cli.StringOpt{
+		Name:      "injective-erc20proxy",
+		Desc:      "Specify address of 0x ERC20Proxy contract on Ganache network",
+		EnvVar:    "DEXTERM_INJECTIVE_ERC20PROXY",
+		Value:     "0xdcf41118095d7bc0901d0215dae114a4cb2ad553", // TODO: THIS IS currently the futures contract address but this should be made separate in the future.
+		//Value:     "0x1dc4c1cefef38a777b15aa20260a54e584b16c48", // THIS IS THE REAL 0x ERC-20 PROXY, commented out to approve to futures contract
+		SetByUser: &networksInjectiveERC20ProxySet,
+	}
+)
+
+var (
+	networksInjectiveExchangeSet bool
+	networksInjectiveExchangeOpt = cli.StringOpt{
+		Name:      "injective-exchange",
+		Desc:      "Specify address of Exchange (Injective's Controller) contract on Ganache network",
+		EnvVar:    "DEXTERM_INJECTIVE_EXCHANGE",
+		Value:     "0x48bacb9266a570d521063ef5dd96e61686dbe788",
+		SetByUser: &networksInjectiveExchangeSet,
+	}
+)
+
+var (
+	networksInjectiveFuturesSet bool
+	networksInjectiveFuturesOpt = cli.StringOpt{
+		Name:      "injective-futures",
+		Desc:      "Specify address of Futures contract on Ganache network",
+		EnvVar:    "DEXTERM_INJECTIVE_FUTURES",
+		Value:     "0xdcf41118095d7bc0901d0215dae114a4cb2ad553",
+		SetByUser: &networksInjectiveFuturesSet,
+	}
+)
+
+var (
+	networksInjectiveCoordinatorSet bool
+	networksInjectiveCoordinatorOpt = cli.StringOpt{
+		Name:      "injective-coordinator",
+		Desc:      "Specify address of Coordinator (Injective's Controller) contract on Ganache network",
+		EnvVar:    "DEXTERM_INJECTIVE_COORDINATOR",
+		Value:     "0xc1be2c0bb387aa13d5019a9c518e8bc93cb53360",
+		SetByUser: &networksInjectiveCoordinatorSet,
+	}
+)
+
+
+var (
 	networksMaticEndpointSet bool
 	networksMaticEndpointOpt = cli.StringOpt{
 		Name:      "matic-endpoint",
 		Desc:      "Specify endpoint for Matic network",
 		EnvVar:    "DEXTERM_MATIC_ENDPOINT",
-		Value:     "matic",
+		Value:     "https://evm-rpc.injective.dev",
 		SetByUser: &networksMaticEndpointSet,
 	}
 )
@@ -430,7 +521,7 @@ var (
 		Name:      "matic-erc20proxy",
 		Desc:      "Specify address of 0x ERC20Proxy contract on Matic network",
 		EnvVar:    "DEXTERM_MATIC_ERC20PROXY",
-		Value:     "0x46fe55b51d24d269cccad63e2ab86f75751a39aa",
+		Value:     "0x5d8df0cc28e77cf206c901d7614aa4a98ef4925f",
 		SetByUser: &networksMaticERC20ProxySet,
 	}
 )
@@ -452,7 +543,7 @@ var (
 		Name:      "matic-futures",
 		Desc:      "Specify address of Futures contract on Matic network",
 		EnvVar:    "DEXTERM_MATIC_FUTURES",
-		Value:     "0x50C655DD81B65D6B48D759F897881BD5ADd86E57",
+		Value:     "0x5d8df0cc28e77cf206c901d7614aa4a98ef4925f",
 		SetByUser: &networksMaticFuturesSet,
 	}
 )

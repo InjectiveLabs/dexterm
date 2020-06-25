@@ -122,6 +122,15 @@ var appConfigMap = map[string]*string{
 	"networks.devnet.futures_address":     app.String(networksDevnetFuturesOpt),
 	"networks.devnet.coordinator_address": app.String(networksDevnetCoordinatorOpt),
 
+	"networks.injective.endpoint":            app.String(networksInjectiveEndpointOpt),
+	"networks.injective.explorer":            app.String(networksInjectiveExplorerOpt),
+	"networks.injective.gas_price":           app.String(networksInjectiveGasPriceOpt),
+	"networks.injective.weth9_address":       app.String(networksInjectiveWETH9Opt),
+	"networks.injective.erc20proxy_address":  app.String(networksInjectiveERC20ProxyOpt),
+	"networks.injective.exchange_address":    app.String(networksInjectiveExchangeOpt),
+	"networks.injective.futures_address":     app.String(networksInjectiveFuturesOpt),
+	"networks.injective.coordinator_address": app.String(networksInjectiveCoordinatorOpt),
+
 	"networks.matic.endpoint":            app.String(networksMaticEndpointOpt),
 	"networks.matic.explorer":            app.String(networksMaticExplorerOpt),
 	"networks.matic.gas_price":           app.String(networksMaticGasPriceOpt),
@@ -177,6 +186,15 @@ var appConfigSetMap = map[string]cli.StringOpt{
 	"networks.devnet.exchange_address":    networksDevnetExchangeOpt,
 	"networks.devnet.futures_address":     networksDevnetFuturesOpt,
 	"networks.devnet.coordinator_address": networksDevnetCoordinatorOpt,
+
+	"networks.injective.endpoint":            networksInjectiveEndpointOpt,
+	"networks.injective.explorer":            networksInjectiveExplorerOpt,
+	"networks.injective.gas_price":           networksInjectiveGasPriceOpt,
+	"networks.injective.weth9_address":       networksInjectiveWETH9Opt,
+	"networks.injective.erc20proxy_address":  networksInjectiveERC20ProxyOpt,
+	"networks.injective.exchange_address":    networksInjectiveExchangeOpt,
+	"networks.injective.futures_address":     networksInjectiveFuturesOpt,
+	"networks.injective.coordinator_address": networksInjectiveCoordinatorOpt,
 
 	"networks.matic.endpoint":            networksMaticEndpointOpt,
 	"networks.matic.explorer":            networksMaticExplorerOpt,
