@@ -1214,6 +1214,7 @@ func (ctl *AppController) ActionDerivativesOrderbook(args interface{}) {
 	}
 
 
+	logrus.Info(ctx)
 	bidStates, err := ctl.ethCore.GetOrderRelevantStates(ctx, bidOrders, bidSignatures)
 	if err != nil {
 		logrus.Error(err)
@@ -1245,7 +1246,9 @@ func (ctl *AppController) ActionDerivativesOrderbook(args interface{}) {
 	logrus.Info("========= ASKS ======")
 
 	askStates, err := ctl.ethCore.GetOrderRelevantStates(ctx, askOrders, askSignatures)
-
+	if err != nil {
+		logrus.Error(err)
+	}
 
 	for idx, fillable := range askStates.FillableTakerAssetAmounts {
 		asks[idx].MetaData["fillableTakerAssetAmount"] = fillable.String()

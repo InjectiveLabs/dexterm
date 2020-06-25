@@ -298,7 +298,7 @@ var (
 		Name:      "devnet-endpoint",
 		Desc:      "Specify endpoint for Ganache network",
 		EnvVar:    "DEXTERM_DEVNET_ENDPOINT",
-		Value:     "https://evm-rpc.injective.dev",
+		Value:     "http://localhost:8545",
 		SetByUser: &networksDevnetEndpointSet,
 	}
 )
@@ -342,7 +342,7 @@ var (
 		Name:      "devnet-erc20proxy",
 		Desc:      "Specify address of 0x ERC20Proxy contract on Ganache network",
 		EnvVar:    "DEXTERM_DEVNET_ERC20PROXY",
-		Value:     "0x87fcda8109382e8d8591f06fb96db4a34b3f0cb4", // TODO: THIS IS currently the futures contract address but this should be made separate in the future.
+		Value:     "0xee6259c5dfe13b25f23e4db587deb74571df22ce", // TODO: THIS IS currently the futures contract address but this should be made separate in the future.
 		//Value:     "0x1dc4c1cefef38a777b15aa20260a54e584b16c48", // THIS IS THE REAL 0x ERC-20 PROXY, commented out to approve to futures contract
 		SetByUser: &networksDevnetERC20ProxySet,
 	}
@@ -365,7 +365,7 @@ var (
 		Name:      "devnet-futures",
 		Desc:      "Specify address of Futures contract on Ganache network",
 		EnvVar:    "DEXTERM_DEVNET_FUTURES",
-		Value:     "0x87fcda8109382e8d8591f06fb96db4a34b3f0cb4",
+		Value:     "0xee6259c5dfe13b25f23e4db587deb74571df22ce",
 		SetByUser: &networksDevnetFuturesSet,
 	}
 )
