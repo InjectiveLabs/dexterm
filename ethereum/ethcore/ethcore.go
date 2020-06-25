@@ -655,6 +655,7 @@ func (cli *EthClient) GetOrderRelevantStates(
 
 	opts := &bind.CallOpts{
 		Context: ctx,
+		From:    cli.ContractAddress(EthContractFutures),
 	}
 	return cli.futures.GetOrderRelevantStates(opts, orders, signatures)
 }
@@ -666,6 +667,7 @@ func (cli *EthClient) GetTransferableAssetAmount(
 
 	opts := &bind.CallOpts{
 		Context: ctx,
+		From:    cli.ContractAddress(EthContractFutures),
 	}
 	return cli.futures.GetTransferableAssetAmount(opts, ownerAddress)
 }

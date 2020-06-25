@@ -326,7 +326,6 @@ func (ctl *AppController) ActionDerivativesLimitShort(args interface{}) {
 		return
 	} else {
 		takerAssetAmount, _ = big.NewInt(0).SetString(quantity.String(), 10)
-		//takerAssetAmount = dec2big(quantity)
 	}
 	price, err := decimal.NewFromString(makeDerivativeOrderArgs.Price)
 	if err != nil {
@@ -1213,11 +1212,10 @@ func (ctl *AppController) ActionDerivativesOrderbook(args interface{}) {
 		bidOrders[idx], bidSignatures[idx] = so2wo(bid.Order)
 	}
 
-
-	logrus.Info(ctx)
 	bidStates, err := ctl.ethCore.GetOrderRelevantStates(ctx, bidOrders, bidSignatures)
 	if err != nil {
 		logrus.Error(err)
+		return
 	}
 	orderStatus := map[uint8]string{
 		0: "INVALID",
@@ -1248,6 +1246,7 @@ func (ctl *AppController) ActionDerivativesOrderbook(args interface{}) {
 	askStates, err := ctl.ethCore.GetOrderRelevantStates(ctx, askOrders, askSignatures)
 	if err != nil {
 		logrus.Error(err)
+		return
 	}
 
 	for idx, fillable := range askStates.FillableTakerAssetAmounts {
@@ -1499,7 +1498,7 @@ func (ctl *AppController) ActionTradeTokens() {
 	table := termtables.CreateTable()
 	table.UTF8Box()
 	table.AddTitle(
-		fmt.Sprintf("Account %s (%s ETH)", defaultAccount.Hex(), ethBalanceStr),
+		fmt.Sprintf("Account %s (%s ETH); Allowance To: %s", defaultAccount.Hex(), ethBalanceStr, proxyAddressHex),
 	)
 	table.AddHeaders("Token", "Address", "Balance", "Unlocked")
 
@@ -1516,7 +1515,8 @@ func (ctl *AppController) ActionTradeTokens() {
 		}
 
 		if allowances[addr] != nil {
-			isUnlocked := (allowances[addr].Cmp(ethcore.UnlimitedAllowance) == 0)
+			// is unlocked if allowance > (2^256-1)/2
+			isUnlocked := (allowances[addr].Cmp(ethcore.UnlimitedAllowance.Div(ethcore.UnlimitedAllowance, big.NewInt(2))) == 1)
 			if isUnlocked {
 				unlockedStr = "x"
 			}
