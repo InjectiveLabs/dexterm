@@ -1229,10 +1229,13 @@ func (ctl *AppController) ActionDerivativesOrderbook(args interface{}) {
 	logrus.Info("========= BIDS ======")
 	for idx, fillable := range bidStates.FillableTakerAssetAmounts {
 		bids[idx].MetaData["fillableTakerAssetAmount"] = fillable.String()
+		if bidStates.IsValidSignature[idx] == false {
+			bids[idx].MetaData["fillableTakerAssetAmount"] = "0"
+		}
 		transferrableAmount, _ := ctl.ethCore.GetTransferableAssetAmount(ctx, common.HexToAddress(bids[idx].Order.MakerAddress))
 		logrus.Info("Order Status: ", orderStatus[bidStates.OrdersInfo[idx].OrderStatus], "\tTransferrable: ", transferrableAmount.String())
 		logrus.Info(bidStates.OrdersInfo[idx].OrderTakerAssetFilledAmount.String(), "/", bids[idx].Order.TakerAssetAmount, " contracts filled")
-		logrus.Info("Fillable: ", fillable.String())
+		logrus.Info("Fillable: ", bids[idx].MetaData["fillableTakerAssetAmount"])
 	}
 
 	askOrders := make([]wrappers.Order, len(asks))
@@ -1251,10 +1254,13 @@ func (ctl *AppController) ActionDerivativesOrderbook(args interface{}) {
 
 	for idx, fillable := range askStates.FillableTakerAssetAmounts {
 		asks[idx].MetaData["fillableTakerAssetAmount"] = fillable.String()
+		if askStates.IsValidSignature[idx] == false {
+			asks[idx].MetaData["fillableTakerAssetAmount"] = "0"
+		}
 		transferrableAmount, _ := ctl.ethCore.GetTransferableAssetAmount(ctx, common.HexToAddress(asks[idx].Order.MakerAddress))
 		logrus.Info("Order Status: ", orderStatus[askStates.OrdersInfo[idx].OrderStatus], "\tTransferrable: ", transferrableAmount.String())
 		logrus.Info(askStates.OrdersInfo[idx].OrderTakerAssetFilledAmount.String(), "/", asks[idx].Order.TakerAssetAmount, " contracts filled")
-		logrus.Info("Fillable: ", fillable.String())
+		logrus.Info("Fillable: ", asks[idx].MetaData["fillableTakerAssetAmount"])
 	}
 	//logrus.Info(bidStates.FillableTakerAssetAmounts)
 	//logrus.Info(askStates.FillableTakerAssetAmounts)

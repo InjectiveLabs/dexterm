@@ -633,7 +633,7 @@ func (cli *EthClient) CreateAndSignDerivativesOrder(
 		TakerFee:            big.NewInt(0),
 		SenderAddress:       common.Address{},
 		FeeRecipientAddress: common.Address{},
-		ExchangeAddress:     cli.ContractAddress(EthContractFutures),
+		ExchangeAddress:     cli.ContractAddress(EthContractExchange),
 
 		ExpirationTimeSeconds: big.NewInt(time.Now().Add(defaultOrderTTL).Unix()),
 		Salt:                  cli.nextSalt(),

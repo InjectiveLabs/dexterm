@@ -342,7 +342,7 @@ var (
 		Name:      "devnet-erc20proxy",
 		Desc:      "Specify address of 0x ERC20Proxy contract on Ganache network",
 		EnvVar:    "DEXTERM_DEVNET_ERC20PROXY",
-		Value:     "0xee6259c5dfe13b25f23e4db587deb74571df22ce", // TODO: THIS IS currently the futures contract address but this should be made separate in the future.
+		Value:     "0xee233a2af6c7761443a951c0e942dff1f1686907", // TODO: THIS IS currently the futures contract address but this should be made separate in the future.
 		//Value:     "0x1dc4c1cefef38a777b15aa20260a54e584b16c48", // THIS IS THE REAL 0x ERC-20 PROXY, commented out to approve to futures contract
 		SetByUser: &networksDevnetERC20ProxySet,
 	}
@@ -365,7 +365,7 @@ var (
 		Name:      "devnet-futures",
 		Desc:      "Specify address of Futures contract on Ganache network",
 		EnvVar:    "DEXTERM_DEVNET_FUTURES",
-		Value:     "0xee6259c5dfe13b25f23e4db587deb74571df22ce",
+		Value:     "0xee233a2af6c7761443a951c0e942dff1f1686907",
 		SetByUser: &networksDevnetFuturesSet,
 	}
 )
@@ -443,7 +443,7 @@ var (
 		Name:      "injective-exchange",
 		Desc:      "Specify address of Exchange (Injective's Controller) contract on Ganache network",
 		EnvVar:    "DEXTERM_INJECTIVE_EXCHANGE",
-		Value:     "0x48bacb9266a570d521063ef5dd96e61686dbe788",
+		Value:     "0x07C6c42C9828124894402E6f434BCe2bBc521CF2",
 		SetByUser: &networksInjectiveExchangeSet,
 	}
 )
