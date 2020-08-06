@@ -337,11 +337,10 @@ var (
 var (
 	networksDevnetERC20ProxySet bool
 	networksDevnetERC20ProxyOpt = cli.StringOpt{
-		Name:   "devnet-erc20proxy",
-		Desc:   "Specify address of 0x ERC20Proxy contract on Ganache network",
-		EnvVar: "DEXTERM_DEVNET_ERC20PROXY",
-		Value:  "0xee233a2af6c7761443a951c0e942dff1f1686907", // TODO: THIS IS currently the futures contract address but this should be made separate in the future.
-		//Value:     "0x1dc4c1cefef38a777b15aa20260a54e584b16c48", // THIS IS THE REAL 0x ERC-20 PROXY, commented out to approve to futures contract
+		Name:      "devnet-erc20proxy",
+		Desc:      "Specify address of 0x ERC20Proxy contract on Ganache network",
+		EnvVar:    "DEXTERM_DEVNET_ERC20PROXY",
+		Value:     "0x1dc4c1cefef38a777b15aa20260a54e584b16c48",
 		SetByUser: &networksDevnetERC20ProxySet,
 	}
 )
@@ -374,7 +373,7 @@ var (
 		Name:      "devnet-coordinator",
 		Desc:      "Specify address of Coordinator (Injective's Controller) contract on Ganache network",
 		EnvVar:    "DEXTERM_DEVNET_COORDINATOR",
-		Value:     "0xc1be2c0bb387aa13d5019a9c518e8bc93cb53360",
+		Value:     "0x4ef5b1E3dA5573466Fb1724D2Fca95290119B664",
 		SetByUser: &networksDevnetCoordinatorSet,
 	}
 )
