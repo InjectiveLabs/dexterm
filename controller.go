@@ -200,7 +200,7 @@ func keccak256(data ...[]byte) []byte {
 	return d.Sum(nil)
 }
 
-func (ctl *AppController) ActionDerivativesLimitLong(args interface{}) {
+func (ctl *AppController) ActionTradeDerivativesLimitLong(args interface{}) {
 	makeDerivativeOrderArgs := args.(*TradeDerivativeLimitOrderArgs)
 
 	ctx := context.Background()
@@ -231,7 +231,6 @@ func (ctl *AppController) ActionDerivativesLimitLong(args interface{}) {
 		}).Errorln("specified market not found")
 		return
 	}
-
 
 	var takerAssetAmount *big.Int
 	var makerAssetAmount *big.Int
@@ -282,7 +281,7 @@ func (ctl *AppController) ActionDerivativesLimitLong(args interface{}) {
 	fmt.Println(orderHash)
 }
 
-func (ctl *AppController) ActionDerivativesLimitShort(args interface{}) {
+func (ctl *AppController) ActionTradeDerivativesLimitShort(args interface{}) {
 	makeDerivativeOrderArgs := args.(*TradeDerivativeLimitOrderArgs)
 
 	ctx := context.Background()
@@ -1149,10 +1148,9 @@ func (ctl *AppController) ActionTradeGenerateLimitOrders(args interface{}) {
 	}
 }
 
-type DerivativeOrderbookArgs struct {
+type TradeDerivativeOrderbookArgs struct {
 	Market string
 }
-
 
 func so2wo(o *sraAPI.Order) (wrappers.Order, []byte) {
 	makerAssetAmount, _ := big.NewInt(0).SetString(o.MakerAssetAmount, 10)
@@ -1180,9 +1178,8 @@ func so2wo(o *sraAPI.Order) (wrappers.Order, []byte) {
 	return wrappedOrder, common.FromHex(o.Signature)
 }
 
-
-func (ctl *AppController) ActionDerivativesOrderbook(args interface{}) {
-	derivativeOrderbookArgs := args.(*DerivativeOrderbookArgs)
+func (ctl *AppController) ActionTradeDerivativesOrderbook(args interface{}) {
+	derivativeOrderbookArgs := args.(*TradeDerivativeOrderbookArgs)
 
 	ctx := context.Background()
 	ctx, cancelFn := context.WithTimeout(ctx, 30*time.Second)
@@ -1196,7 +1193,6 @@ func (ctl *AppController) ActionDerivativesOrderbook(args interface{}) {
 			assetDataString = market.MarketID + "00000000"
 		}
 	}
-
 
 	bids, asks, err := ctl.sraClient.DerivativeOrders(ctx, assetDataString)
 	if err != nil {
@@ -1285,7 +1281,7 @@ func (ctl *AppController) ActionDerivativesOrderbook(args interface{}) {
 
 			price := decimal.RequireFromString(ask.Order.MakerAssetAmount).Truncate(9).Shift(-18).String()
 			quantity := decimal.RequireFromString(ask.MetaData["fillableTakerAssetAmount"])
-			if quantity.IsZero(){
+			if quantity.IsZero() {
 				continue
 			}
 			table.AddRow(
@@ -1309,7 +1305,7 @@ func (ctl *AppController) ActionDerivativesOrderbook(args interface{}) {
 
 			price := decimal.RequireFromString(bid.Order.MakerAssetAmount).Truncate(9).Shift(-18).String()
 			quantity := decimal.RequireFromString(bid.MetaData["fillableTakerAssetAmount"])
-			if quantity.IsZero(){
+			if quantity.IsZero() {
 				continue
 			}
 			table.AddRow(
@@ -1422,7 +1418,7 @@ func (ctl *AppController) getTokenNamesAndAssets(ctx context.Context) (tokenName
 		return
 	}
 
-	tokenMap := make(map[string]common.Address, len(pairs) + len(markets))
+	tokenMap := make(map[string]common.Address, len(pairs)+len(markets))
 
 	for _, pair := range pairs {
 		parts := strings.Split(pair.Name, "/")
@@ -1455,9 +1451,6 @@ func (ctl *AppController) getTokenNamesAndAssets(ctx context.Context) (tokenName
 	for _, name := range tokenNames {
 		assets = append(assets, tokenMap[name])
 	}
-
-
-
 
 	return tokenNames, assets, nil
 }

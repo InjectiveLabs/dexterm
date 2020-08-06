@@ -41,17 +41,6 @@ var (
 	}
 )
 
-//var (
-//	derivativesEndpointSet bool
-//	derivativesEndpointOpt = cli.StringOpt{
-//		Name:      "D derivatives-endpoint",
-//		Desc:      "Specify DEX derivatives API endpoint for the session.",
-//		EnvVar:    "DEXTERM_DERIVATIVES_API_ENDPOINT",
-//		Value:     "http://localhost:4444",
-//		SetByUser: &derivativesEndpointSet,
-//	}
-//)
-
 var (
 	accountsKeystoreSet bool
 	accountsKeystoreOpt = cli.StringOpt{
@@ -78,7 +67,6 @@ var appConfigMap = map[string]*string{
 	"log.debug": app.String(logDebugOpt),
 
 	"relayer.endpoint": app.String(relayerEndpointOpt),
-	//"derivatives.endpoint": app.String(derivativesEndpointOpt),
 
 	"accounts.keystore": app.String(accountsKeystoreOpt),
 	"accounts.default":  app.String(accountsDefaultOpt),
