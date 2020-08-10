@@ -93,6 +93,17 @@ var (
 )
 
 var (
+	networksMainnetDevUtilsSet bool
+	networksMainnetDevUtilsOpt = cli.StringOpt{
+		Name:      "mainnet-devutils",
+		Desc:      "Specify address of 0x Exchange DevUtils contract on Mainnet network",
+		EnvVar:    "DEXTERM_MAINNET_DEVUTILS",
+		Value:     "0x161793cdca4ff9e766a706c2c49c36ac1340bbcd",
+		SetByUser: &networksMainnetDevUtilsSet,
+	}
+)
+
+var (
 	networksMainnetFuturesSet bool
 	networksMainnetFuturesOpt = cli.StringOpt{
 		Name:      "mainnet-futures",
@@ -177,6 +188,17 @@ var (
 		EnvVar:    "DEXTERM_ROPSTEN_EXCHANGE",
 		Value:     "",
 		SetByUser: &networksRopstenExchangeSet,
+	}
+)
+
+var (
+	networksRopstenDevUtilsSet bool
+	networksRopstenDevUtilsOpt = cli.StringOpt{
+		Name:      "ropsten-devutils",
+		Desc:      "Specify address of 0x Exchange DevUtils contract on Ropsten network",
+		EnvVar:    "DEXTERM_ROPSTEN_DEVUTILS",
+		Value:     "0x161793cdca4ff9e766a706c2c49c36ac1340bbcd",
+		SetByUser: &networksRopstenDevUtilsSet,
 	}
 )
 
@@ -282,6 +304,17 @@ var (
 )
 
 var (
+	networksKovanDevUtilsSet bool
+	networksKovanDevUtilsOpt = cli.StringOpt{
+		Name:      "kovan-devutils",
+		Desc:      "Specify address of 0x Exchange DevUtils contract on Kovan network",
+		EnvVar:    "DEXTERM_KOVAN_DEVUTILS",
+		Value:     "0x161793cdca4ff9e766a706c2c49c36ac1340bbcd",
+		SetByUser: &networksKovanDevUtilsSet,
+	}
+)
+
+var (
 	networksKovanCoordinatorSet bool
 	networksKovanCoordinatorOpt = cli.StringOpt{
 		Name:      "kovan-coordinator",
@@ -360,6 +393,17 @@ var (
 )
 
 var (
+	networksDevnetDevUtilsSet bool
+	networksDevnetDevUtilsOpt = cli.StringOpt{
+		Name:      "devnet-devutils",
+		Desc:      "Specify address of 0x Exchange DevUtils contract on Ganache network",
+		EnvVar:    "DEXTERM_DEVNET_DEVUTILS",
+		Value:     "0xa31e64ea55b9b6bbb9d6a676738e9a5b23149f84",
+		SetByUser: &networksDevnetDevUtilsSet,
+	}
+)
+
+var (
 	networksDevnetFuturesSet bool
 	networksDevnetFuturesOpt = cli.StringOpt{
 		Name:      "devnet-futures",
@@ -385,9 +429,9 @@ var (
 	networksInjectiveEndpointSet bool
 	networksInjectiveEndpointOpt = cli.StringOpt{
 		Name:      "injective-endpoint",
-		Desc:      "Specify endpoint for Ganache network",
+		Desc:      "Specify endpoint for Injective network",
 		EnvVar:    "DEXTERM_INJECTIVE_ENDPOINT",
-		Value:     "https://evm-rpc.injective.dev",
+		Value:     "https://evm-us.injective.dev",
 		SetByUser: &networksInjectiveEndpointSet,
 	}
 )
@@ -396,9 +440,9 @@ var (
 	networksInjectiveExplorerSet bool
 	networksInjectiveExplorerOpt = cli.StringOpt{
 		Name:      "injective-explorer",
-		Desc:      "Specify explorer prefix for transactions on Ganache network",
+		Desc:      "Specify explorer prefix for transactions on Injective network",
 		EnvVar:    "DEXTERM_INJECTIVE_EXPLORER",
-		Value:     "",
+		Value:     "https://evm-explorer.injective.dev",
 		SetByUser: &networksInjectiveExplorerSet,
 	}
 )
@@ -407,7 +451,7 @@ var (
 	networksInjectiveGasPriceSet bool
 	networksInjectiveGasPriceOpt = cli.StringOpt{
 		Name:      "injective-gasprice",
-		Desc:      "Specify min gasprice for Ganache network",
+		Desc:      "Specify min gasprice for Injective network",
 		EnvVar:    "DEXTERM_INJECTIVE_GASPRICE",
 		Value:     "10000000000",
 		SetByUser: &networksInjectiveGasPriceSet,
@@ -418,7 +462,7 @@ var (
 	networksInjectiveWETH9Set bool
 	networksInjectiveWETH9Opt = cli.StringOpt{
 		Name:      "injective-weth9",
-		Desc:      "Specify address of 0x WETH9 contract on Ganache network",
+		Desc:      "Specify address of 0x WETH9 contract on Injective network",
 		EnvVar:    "DEXTERM_INJECTIVE_WETH9",
 		Value:     "0x0b1ba0af832d7c05fd64161e0db78e85978e8082",
 		SetByUser: &networksInjectiveWETH9Set,
@@ -429,7 +473,7 @@ var (
 	networksInjectiveERC20ProxySet bool
 	networksInjectiveERC20ProxyOpt = cli.StringOpt{
 		Name:      "injective-erc20proxy",
-		Desc:      "Specify address of 0x ERC20Proxy contract on Ganache network",
+		Desc:      "Specify address of 0x ERC20Proxy contract on Injective network",
 		EnvVar:    "DEXTERM_INJECTIVE_ERC20PROXY",
 		Value:     "0xdcf41118095d7bc0901d0215dae114a4cb2ad553", // TODO: THIS IS currently the futures contract address but this should be made separate in the future.
 		//Value:     "0x1dc4c1cefef38a777b15aa20260a54e584b16c48", // THIS IS THE REAL 0x ERC-20 PROXY, commented out to approve to futures contract
@@ -441,7 +485,7 @@ var (
 	networksInjectiveExchangeSet bool
 	networksInjectiveExchangeOpt = cli.StringOpt{
 		Name:      "injective-exchange",
-		Desc:      "Specify address of Exchange (Injective's Controller) contract on Ganache network",
+		Desc:      "Specify address of Exchange (Injective's Controller) contract on Injective network",
 		EnvVar:    "DEXTERM_INJECTIVE_EXCHANGE",
 		Value:     "0x07C6c42C9828124894402E6f434BCe2bBc521CF2",
 		SetByUser: &networksInjectiveExchangeSet,
@@ -449,10 +493,21 @@ var (
 )
 
 var (
+	networksInjectiveDevUtilsSet bool
+	networksInjectiveDevUtilsOpt = cli.StringOpt{
+		Name:      "injective-devutils",
+		Desc:      "Specify address of 0x Exchange DevUtils contract on Injective network",
+		EnvVar:    "DEXTERM_INJECTIVE_DEVUTILS",
+		Value:     "0x988e8D73aCd4F9aB84cF4b0D6C264A6f0F275807",
+		SetByUser: &networksInjectiveDevUtilsSet,
+	}
+)
+
+var (
 	networksInjectiveFuturesSet bool
 	networksInjectiveFuturesOpt = cli.StringOpt{
 		Name:      "injective-futures",
-		Desc:      "Specify address of Futures contract on Ganache network",
+		Desc:      "Specify address of Futures contract on Injective network",
 		EnvVar:    "DEXTERM_INJECTIVE_FUTURES",
 		Value:     "0xdcf41118095d7bc0901d0215dae114a4cb2ad553",
 		SetByUser: &networksInjectiveFuturesSet,
@@ -463,7 +518,7 @@ var (
 	networksInjectiveCoordinatorSet bool
 	networksInjectiveCoordinatorOpt = cli.StringOpt{
 		Name:      "injective-coordinator",
-		Desc:      "Specify address of Coordinator (Injective's Controller) contract on Ganache network",
+		Desc:      "Specify address of Coordinator (Injective's Controller) contract on Injective network",
 		EnvVar:    "DEXTERM_INJECTIVE_COORDINATOR",
 		Value:     "0xc1be2c0bb387aa13d5019a9c518e8bc93cb53360",
 		SetByUser: &networksInjectiveCoordinatorSet,

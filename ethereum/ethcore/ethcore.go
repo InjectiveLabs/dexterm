@@ -45,6 +45,7 @@ type EthClient struct {
 	ercWrappersMux *sync.RWMutex
 	weth9          *wrappers.WETH9
 	coordinator    *wrappers.Coordinator
+	devUtils    	*wrappers.DevUtils
 	futures        *wrappers.Futures
 }
 
@@ -54,6 +55,7 @@ const (
 	EthContractERC20Proxy  EthContract = "erc20proxy"
 	EthContractWETH9       EthContract = "weth9"
 	EthContractExchange    EthContract = "exchange"
+	EthContractDevUtils    EthContract = "devUtils"
 	EthContractFutures     EthContract = "futures"
 	EthContractCoordinator EthContract = "coordinator"
 )
@@ -143,6 +145,15 @@ func (cli *EthClient) initContractWrappers() error {
 		return err
 	}
 	cli.coordinator = coordinator
+
+
+	devUtils, err := wrappers.NewDevUtils(cli.contractAddresses[EthContractDevUtils], cli.ethManager)
+	if err != nil {
+		err = errors.Wrap(err, "failed to init DevUtils contract wrapper")
+		return err
+	}
+	cli.devUtils = devUtils
+
 
 	futures, err := wrappers.NewFutures(cli.contractAddresses[EthContractFutures], cli.ethManager)
 	if err != nil {
@@ -658,6 +669,24 @@ func (cli *EthClient) GetOrderRelevantStates(
 		From:    cli.ContractAddress(EthContractFutures),
 	}
 	return cli.futures.GetOrderRelevantStates(opts, orders, signatures)
+}
+
+func (cli *EthClient) GetZeroExOrderRelevantStates(
+	ctx context.Context,
+	orders []wrappers.Order,
+	signatures [][]byte,
+) (struct {
+	OrdersInfo                []wrappers.OrderInfo
+	FillableTakerAssetAmounts []*big.Int
+	IsValidSignature          []bool
+}, error) {
+
+	opts := &bind.CallOpts{
+		Context: ctx,
+		From:    cli.ContractAddress(EthContractDevUtils),
+	}
+
+	return cli.devUtils.GetOrderRelevantStates(opts, orders, signatures)
 }
 
 func (cli *EthClient) GetTransferableAssetAmount(

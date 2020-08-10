@@ -1232,8 +1232,8 @@ func (ctl *AppController) ActionDerivativesOrderbook(args interface{}) {
 		if bidStates.IsValidSignature[idx] == false {
 			bids[idx].MetaData["fillableTakerAssetAmount"] = "0"
 		}
-		transferrableAmount, _ := ctl.ethCore.GetTransferableAssetAmount(ctx, common.HexToAddress(bids[idx].Order.MakerAddress))
-		logrus.Info("Order Status: ", orderStatus[bidStates.OrdersInfo[idx].OrderStatus], "\tTransferrable: ", transferrableAmount.String())
+		//transferrableAmount, _ := ctl.ethCore.GetTransferableAssetAmount(ctx, common.HexToAddress(bids[idx].Order.MakerAddress))
+		logrus.Info("Order Status: ", orderStatus[bidStates.OrdersInfo[idx].OrderStatus])
 		logrus.Info(bidStates.OrdersInfo[idx].OrderTakerAssetFilledAmount.String(), "/", bids[idx].Order.TakerAssetAmount, " contracts filled")
 		logrus.Info("Fillable: ", bids[idx].MetaData["fillableTakerAssetAmount"])
 	}
@@ -1343,6 +1343,71 @@ func (ctl *AppController) ActionTradeOrderbook(args interface{}) {
 		return
 	}
 
+	bidOrders := make([]wrappers.Order, len(bids))
+	bidSignatures := make([][]byte, len(bids))
+
+	for idx, bid := range bids {
+		bidOrders[idx], bidSignatures[idx] = so2wo(bid.Order)
+	}
+
+	bidStates, err := ctl.ethCore.GetZeroExOrderRelevantStates(ctx, bidOrders, bidSignatures)
+	if err != nil {
+		logrus.Error(err)
+		return
+	}
+	orderStatus := map[uint8]string{
+		0: "INVALID",
+		1: "INVALID_MAKER_ASSET_AMOUNT",
+		2: "INVALID_TAKER_ASSET_AMOUNT",
+		3: "FILLABLE",
+		4: "EXPIRED",
+		5: "FULLY_FILLED",
+		6: "CANCELLED",
+	}
+
+	for idx, fillable := range bidStates.FillableTakerAssetAmounts {
+		bids[idx].MetaData["fillableTakerAssetAmount"] = decimal.RequireFromString(fillable.String()).Shift(-18).StringFixed(5)
+		if bidStates.IsValidSignature[idx] == false {
+			bids[idx].MetaData["fillableTakerAssetAmount"] = decimal.RequireFromString("0").Shift(-18).StringFixed(5)
+		}
+		price, _ := calcOrderPrice(bids[idx].Order, true)
+		bids[idx].MetaData["price"] = price.StringFixed(9)
+		if orderStatus[bidStates.OrdersInfo[idx].OrderStatus] == "FULLY_FILLED" {
+			bids[idx].MetaData["notes"] = " " + decimal.RequireFromString(bids[idx].Order.TakerAssetAmount).Shift(-18).StringFixed(5) + " " + orderStatus[bidStates.OrdersInfo[idx].OrderStatus]
+		} else {
+			bids[idx].MetaData["notes"] = " " + bids[idx].MetaData["fillableTakerAssetAmount"] + "/" + decimal.RequireFromString(bids[idx].Order.TakerAssetAmount).Shift(-18).StringFixed(5) + " remaining " + orderStatus[bidStates.OrdersInfo[idx].OrderStatus]
+		}
+
+	}
+
+	askOrders := make([]wrappers.Order, len(asks))
+	askSignatures := make([][]byte, len(asks))
+
+	for idx, ask := range asks {
+		askOrders[idx], askSignatures[idx] = so2wo(ask.Order)
+	}
+
+	askStates, err := ctl.ethCore.GetZeroExOrderRelevantStates(ctx, askOrders, askSignatures)
+	if err != nil {
+		logrus.Error(err)
+		return
+	}
+
+	for idx, fillable := range askStates.FillableTakerAssetAmounts {
+		asks[idx].MetaData["fillableTakerAssetAmount"] = decimal.RequireFromString(fillable.String()).Shift(-18).StringFixed(5)
+		if askStates.IsValidSignature[idx] == false {
+			asks[idx].MetaData["fillableTakerAssetAmount"] = decimal.RequireFromString("0").Shift(-18).StringFixed(5)
+		}
+		price, _ := calcOrderPrice(asks[idx].Order, false)
+		asks[idx].MetaData["price"] = price.StringFixed(9)
+		if orderStatus[askStates.OrdersInfo[idx].OrderStatus] == "FULLY_FILLED" {
+			asks[idx].MetaData["notes"] = " " + decimal.RequireFromString(asks[idx].Order.TakerAssetAmount).Shift(-18).StringFixed(5) + " " + orderStatus[askStates.OrdersInfo[idx].OrderStatus]
+		} else {
+			asks[idx].MetaData["notes"] =  " " + asks[idx].MetaData["fillableTakerAssetAmount"] + "/" + decimal.RequireFromString(asks[idx].Order.TakerAssetAmount).Shift(-18).StringFixed(5) + " remaining " + orderStatus[askStates.OrdersInfo[idx].OrderStatus]
+		}
+	}
+
+
 	pair := strings.Split(orderbookArgs.Market, "/")
 	baseAsset := pair[0]
 	quoteAsset := pair[1]
@@ -1355,7 +1420,24 @@ func (ctl *AppController) ActionTradeOrderbook(args interface{}) {
 		fmt.Sprintf("Amount (%s)", baseAsset),
 		"Notes",
 	)
+	zero := decimal.RequireFromString("0").Shift(-18).StringFixed(5)
+	sort.Slice(asks, func(i, j int) bool {
+		if asks[i].MetaData["fillableTakerAssetAmount"] == zero {
+			return true
+		}else if asks[j].MetaData["fillableTakerAssetAmount"] == zero {
+			return false
+		}
+		return decimal.RequireFromString(asks[i].MetaData["price"]).GreaterThan(decimal.RequireFromString(asks[j].MetaData["price"]))
+	})
 
+	sort.Slice(bids, func(i, j int) bool {
+		if bids[i].MetaData["fillableTakerAssetAmount"] == zero {
+			return false
+		}else if bids[j].MetaData["fillableTakerAssetAmount"] == zero {
+			return true
+		}
+		return decimal.RequireFromString(bids[i].MetaData["price"]).GreaterThan(decimal.RequireFromString(bids[j].MetaData["price"]))
+	})
 	if len(asks) == 0 {
 		table.AddRow(color.RedString("No asks."), "", "")
 	} else {
@@ -1365,10 +1447,10 @@ func (ctl *AppController) ActionTradeOrderbook(args interface{}) {
 				notes = "⭑ owner"
 			}
 
-			price, vol := calcOrderPrice(ask.Order, false)
+			notes += ask.MetaData["notes"]
 			table.AddRow(
-				color.RedString("%s", price.StringFixed(9)),
-				color.RedString("%s", vol.Shift(-18).StringFixed(9)),
+				color.RedString("%s", ask.MetaData["price"]),
+				color.RedString("%s", ask.MetaData["fillableTakerAssetAmount"]),
 				notes,
 			)
 		}
@@ -1385,10 +1467,12 @@ func (ctl *AppController) ActionTradeOrderbook(args interface{}) {
 				notes = "⭑ owner"
 			}
 
-			price, vol := calcOrderPrice(bid.Order, true)
+			notes += bid.MetaData["notes"]
+
+			price, _ := calcOrderPrice(bid.Order, true)
 			table.AddRow(
 				color.GreenString("%s", price.StringFixed(9)),
-				color.GreenString("%s", vol.Shift(-18).StringFixed(9)),
+				color.GreenString("%s", bid.MetaData["fillableTakerAssetAmount"]),
 				notes,
 			)
 		}
@@ -2156,12 +2240,14 @@ func (ctl *AppController) initEthClient() error {
 	weth9AddressHex := ctl.mustConfigValue(fmt.Sprintf("networks.%s.weth9_address", networkName))
 	erc20ProxyAddressHex := ctl.mustConfigValue(fmt.Sprintf("networks.%s.erc20proxy_address", networkName))
 	exchangeAddressHex := ctl.mustConfigValue(fmt.Sprintf("networks.%s.exchange_address", networkName))
+	devUtilsAddressHex := ctl.mustConfigValue(fmt.Sprintf("networks.%s.devutils_address", networkName))
 	futuresAddressHex := ctl.mustConfigValue(fmt.Sprintf("networks.%s.futures_address", networkName))
 	coordinatorAddressHex := ctl.mustConfigValue(fmt.Sprintf("networks.%s.coordinator_address", networkName))
 	contractAddresses := map[ethcore.EthContract]common.Address{
 		ethcore.EthContractWETH9:       common.HexToAddress(weth9AddressHex),
 		ethcore.EthContractERC20Proxy:  common.HexToAddress(erc20ProxyAddressHex),
 		ethcore.EthContractExchange:    common.HexToAddress(exchangeAddressHex),
+		ethcore.EthContractDevUtils:    common.HexToAddress(devUtilsAddressHex),
 		ethcore.EthContractFutures:     common.HexToAddress(futuresAddressHex),
 		ethcore.EthContractCoordinator: common.HexToAddress(coordinatorAddressHex),
 	}
