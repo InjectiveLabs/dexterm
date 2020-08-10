@@ -39,27 +39,26 @@ const (
 	MenuMain MenuItem = "main"
 
 	// Main menu items
-	MenuTrade       MenuItem = "trade-spot"
-	MenuDerivatives MenuItem = "trade-derivatives"
-	MenuAccounts    MenuItem = "keystore"
-	MenuUtil        MenuItem = "util"
+	MenuTradeSpot        MenuItem = "spot"
+	MenuTradeDerivatives MenuItem = "derivatives"
+	MenuAccounts         MenuItem = "keystore"
+	MenuUtil             MenuItem = "util"
 
 	// Trade menu items
-	MenuTradeLimitBuy       MenuItem = "limitbuy"
-	MenuTradeLimitSell      MenuItem = "limitsell"
-	MenuTradeFillOrder      MenuItem = "fill"
-	MenuTradeCancelOrder    MenuItem = "cancel"
-	MenuTradeMarketBuy      MenuItem = "marketbuy"
-	MenuTradeMarketSell     MenuItem = "marketsell"
-	MenuTradeGenerateLimits MenuItem = "generatelimits"
-	MenuTradeOrderbook      MenuItem = "orderbook"
-	MenuTradeTokens         MenuItem = "tokens"
-	MenuTradePairs          MenuItem = "pairs"
+	MenuTradeSpotLimitBuy    MenuItem = "limitbuy"
+	MenuTradeSpotLimitSell   MenuItem = "limitsell"
+	MenuTradeSpotFillOrder   MenuItem = "fill"
+	MenuTradeSpotCancelOrder MenuItem = "cancel"
+	MenuTradeSpotMarketBuy   MenuItem = "marketbuy"
+	MenuTradeSpotMarketSell  MenuItem = "marketsell"
+	MenuTradeSpotOrderbook   MenuItem = "orderbook"
+	MenuTradeSpotTokens      MenuItem = "tokens"
+	MenuTradeSpotPairs       MenuItem = "pairs"
 
 	// Derivatives menu items
-	MenuDerivativesLimitLong  MenuItem = "limitlong"
-	MenuDerivativesLimitShort MenuItem = "limitshort"
-	MenuDerivativesOrderbook  MenuItem = "derivatives-orderbook"
+	MenuTradeDerivativesLimitLong  MenuItem = "limitlong"
+	MenuTradeDerivativesLimitShort MenuItem = "limitshort"
+	MenuTradeDerivativesOrderbook  MenuItem = "orderbook"
 
 	// Util menu items
 	MenuUtilUnlock MenuItem = "unlock"
@@ -74,21 +73,24 @@ const (
 	MenuAccountsImportPrivKey MenuItem = "privkey"
 	MenuAccountsList          MenuItem = "list"
 
+	// TODO: move to debug menu
+	// MenuDebugSpotGenerateLimits MenuItem = "generatelimits"
+
 	// Actions in main menu
 	MenuAbout MenuItem = "about"
 	MenuQuit  MenuItem = "quit"
 )
 
 var mainSuggestions = []prompt.Suggest{
-	{Text: "t/trade-spot", Description: "Start creating Buy and Sell orders with DEX trade mode."},
-	{Text: "d/trade-derivatives", Description: "Start creating Derivatives orders with DEX trade mode."},
+	{Text: "s/spot", Description: "Start creating Buy and Sell orders with DEX trade mode."},
+	{Text: "d/derivatives", Description: "Start creating Derivatives orders with DEX trade mode."},
 	{Text: "k/keystore", Description: "Manage Ethereum accounts and private keys."},
 	{Text: "u/util", Description: "Misc utils for working with wallet balances."},
 	{Text: "a/about", Description: "Print information about this app."},
 	{Text: "q/quit", Description: "Quit from this app."},
 }
 
-var tradingSuggestions = []prompt.Suggest{
+var tradeSpotSuggestions = []prompt.Suggest{
 	{Text: "b/limitbuy", Description: "Create a Limit Buy order."},
 	{Text: "s/limitsell", Description: "Create a Limit Sell order."},
 	{Text: "f/fill", Description: "Fill an order (Take Order)."},
@@ -97,8 +99,6 @@ var tradingSuggestions = []prompt.Suggest{
 	{Text: "mb/marketbuy", Description: "Create a Market Buy order."},
 	{Text: "ms/marketsell", Description: "Create a Market Sell order."},
 
-	{Text: "g/generatelimits", Description: "Generate many limit buy and sell orders to populate the orderbook"},
-
 	{Text: "o/orderbook", Description: "View orderbook of a market."},
 	{Text: "t/tokens", Description: "View your account token balances."},
 	{Text: "p/pairs", Description: "View available pairs for trade."},
@@ -106,11 +106,11 @@ var tradingSuggestions = []prompt.Suggest{
 	{Text: "q/quit", Description: "Quit from the trading menu."},
 }
 
-var derivativesSuggestions = []prompt.Suggest{
+var tradeDerivativesSuggestions = []prompt.Suggest{
 	{Text: "l/limitlong", Description: "Create a Limit Long order."},
 	{Text: "h/limitshort", Description: "Create a Limit Short order."},
 
-	{Text: "do/derivatives-orderbook", Description: "View orderbook of a derivatives market."},
+	{Text: "o/orderbook", Description: "View orderbook of a derivatives market."},
 	{Text: "q/quit", Description: "Quit from the trading menu."},
 }
 
@@ -131,6 +131,10 @@ var utilSuggestions = []prompt.Suggest{
 	{Text: "uw/unwrap", Description: "Unwrap WETH ERC20 tokens and receive ETH."},
 	{Text: "q/quit", Description: "Quit from the util menu."},
 }
+
+// var debugSuggestions = []prompt.Suggest{
+// 	{Text: "g/generatelimits", Description: "Generate many limit buy and sell orders to populate the orderbook"},
+// }
 
 func (a *AppState) LivePrefix() func() (prefix string, useLivePrefix bool) {
 	return func() (prefix string, useLivePrefix bool) {
@@ -166,7 +170,8 @@ func (a *AppState) Completer() prompt.Completer {
 			return prompt.FilterFuzzy(a.argContainer.CurrentFieldSuggestions(), d.TextBeforeCursor(), true)
 		case a.root == MenuMain,
 			a.root == MenuUtil,
-			a.root == MenuTrade,
+			a.root == MenuTradeSpot,
+			a.root == MenuTradeDerivatives,
 			a.root == MenuAccounts:
 			return prompt.FilterHasPrefix(a.suggestions, d.TextBeforeCursor(), true)
 		default:
@@ -246,11 +251,11 @@ func (a *AppState) executeInRoot(cmd string) {
 
 	if cmdArgs == nil {
 		switch a.root {
-		case MenuTrade:
+		case MenuTradeSpot:
 			switch {
-			case oneOf(MenuItem(cmd), MenuTradeLimitBuy, "b", "b/limitbuy"):
+			case oneOf(MenuItem(cmd), MenuTradeSpotLimitBuy, "b", "b/limitbuy"):
 				a.argContainer = NewArgContainer(&TradeLimitBuyOrderArgs{})
-				a.cmd = MenuTradeLimitBuy
+				a.cmd = MenuTradeSpotLimitBuy
 				a.suggestions = nil
 
 				a.argContainer.AddSuggestions(0, a.controller.SuggestMarkets())
@@ -264,9 +269,9 @@ func (a *AppState) executeInRoot(cmd string) {
 				}})
 
 				return
-			case oneOf(MenuItem(cmd), MenuTradeLimitSell, "s", "s/limitsell"):
+			case oneOf(MenuItem(cmd), MenuTradeSpotLimitSell, "s", "s/limitsell"):
 				a.argContainer = NewArgContainer(&TradeLimitSellOrderArgs{})
-				a.cmd = MenuTradeLimitSell
+				a.cmd = MenuTradeSpotLimitSell
 				a.suggestions = nil
 
 				a.argContainer.AddSuggestions(0, a.controller.SuggestMarkets())
@@ -280,9 +285,9 @@ func (a *AppState) executeInRoot(cmd string) {
 				}})
 
 				return
-			case oneOf(MenuItem(cmd), MenuTradeMarketBuy, "mb", "mb/marketbuy"):
+			case oneOf(MenuItem(cmd), MenuTradeSpotMarketBuy, "mb", "mb/marketbuy"):
 				a.argContainer = NewArgContainer(&TradeMarketBuyOrderArgs{})
-				a.cmd = MenuTradeMarketBuy
+				a.cmd = MenuTradeSpotMarketBuy
 				a.suggestions = nil
 
 				a.argContainer.AddSuggestions(0, a.controller.SuggestMarkets())
@@ -292,9 +297,9 @@ func (a *AppState) executeInRoot(cmd string) {
 				}})
 
 				return
-			case oneOf(MenuItem(cmd), MenuTradeMarketSell, "ms", "ms/marketsell"):
+			case oneOf(MenuItem(cmd), MenuTradeSpotMarketSell, "ms", "ms/marketsell"):
 				a.argContainer = NewArgContainer(&TradeMarketSellOrderArgs{})
-				a.cmd = MenuTradeMarketSell
+				a.cmd = MenuTradeSpotMarketSell
 				a.suggestions = nil
 
 				a.argContainer.AddSuggestions(0, a.controller.SuggestMarkets())
@@ -304,21 +309,9 @@ func (a *AppState) executeInRoot(cmd string) {
 				}})
 
 				return
-			case oneOf(MenuItem(cmd), MenuTradeGenerateLimits, "g", "g/generatelimits"):
-				a.argContainer = NewArgContainer(&TradeGenerateLimitOrdersArgs{})
-				a.cmd = MenuTradeGenerateLimits
-				a.suggestions = nil
-
-				a.argContainer.AddSuggestions(0, a.controller.SuggestMarkets())
-				a.argContainer.AddSuggestions(1, []prompt.Suggest{{
-					Text:        "1.00",
-					Description: "Amount must be entered as float. Minimum value is 0.0000001",
-				}})
-
-				return
-			case oneOf(MenuItem(cmd), MenuTradeFillOrder, "f", "f/fill"):
+			case oneOf(MenuItem(cmd), MenuTradeSpotFillOrder, "f", "f/fill"):
 				a.argContainer = NewArgContainer(&TradeFillOrderArgs{})
-				a.cmd = MenuTradeFillOrder
+				a.cmd = MenuTradeSpotFillOrder
 				a.suggestions = nil
 
 				a.argContainer.AddSuggestions(0, a.controller.SuggestMarkets())
@@ -331,9 +324,9 @@ func (a *AppState) executeInRoot(cmd string) {
 				}})
 
 				return
-			case oneOf(MenuItem(cmd), MenuTradeCancelOrder, "c", "c/cancel"):
+			case oneOf(MenuItem(cmd), MenuTradeSpotCancelOrder, "c", "c/cancel"):
 				a.argContainer = NewArgContainer(&TradeCancelOrderArgs{})
-				a.cmd = MenuTradeCancelOrder
+				a.cmd = MenuTradeSpotCancelOrder
 				a.suggestions = nil
 
 				a.argContainer.AddSuggestions(0, a.controller.SuggestMarkets())
@@ -342,29 +335,29 @@ func (a *AppState) executeInRoot(cmd string) {
 				})
 
 				return
-			case oneOf(MenuItem(cmd), MenuTradeOrderbook, "o", "o/orderbook"):
+			case oneOf(MenuItem(cmd), MenuTradeSpotOrderbook, "o", "o/orderbook"):
 				a.argContainer = NewArgContainer(&TradeOrderbookArgs{})
-				a.cmd = MenuTradeOrderbook
+				a.cmd = MenuTradeSpotOrderbook
 				a.suggestions = nil
 
 				a.argContainer.AddSuggestions(0, a.controller.SuggestMarkets())
 
 				return
-			case oneOf(MenuItem(cmd), MenuTradePairs, "p", "p/pairs"):
-				a.cmd = MenuTradePairs
+			case oneOf(MenuItem(cmd), MenuTradeSpotPairs, "p", "p/pairs"):
+				a.cmd = MenuTradeSpotPairs
 				a.suggestions = nil
-			case oneOf(MenuItem(cmd), MenuTradeTokens, "t", "t/tokens"):
-				a.cmd = MenuTradeTokens
+			case oneOf(MenuItem(cmd), MenuTradeSpotTokens, "t", "t/tokens"):
+				a.cmd = MenuTradeSpotTokens
 				a.suggestions = nil
 			default:
 				logrus.Warningf("unknown command: %s", cmd)
 				return
 			}
-		case MenuDerivatives:
+		case MenuTradeDerivatives:
 			switch {
-			case oneOf(MenuItem(cmd), MenuDerivativesLimitLong, "l", "l/limitlong"):
+			case oneOf(MenuItem(cmd), MenuTradeDerivativesLimitLong, "l", "l/limitlong"):
 				a.argContainer = NewArgContainer(&TradeDerivativeLimitOrderArgs{})
-				a.cmd = MenuDerivativesLimitLong
+				a.cmd = MenuTradeDerivativesLimitLong
 				a.suggestions = nil
 				a.argContainer.AddSuggestions(0, a.controller.SuggestDerivativesMarkets())
 
@@ -378,9 +371,9 @@ func (a *AppState) executeInRoot(cmd string) {
 				}})
 
 				return
-			case oneOf(MenuItem(cmd), MenuDerivativesLimitShort, "h", "h/limitshort"):
+			case oneOf(MenuItem(cmd), MenuTradeDerivativesLimitShort, "h", "h/limitshort"):
 				a.argContainer = NewArgContainer(&TradeDerivativeLimitOrderArgs{})
-				a.cmd = MenuDerivativesLimitShort
+				a.cmd = MenuTradeDerivativesLimitShort
 				a.suggestions = nil
 
 				a.argContainer.AddSuggestions(0, a.controller.SuggestDerivativesMarkets())
@@ -394,9 +387,9 @@ func (a *AppState) executeInRoot(cmd string) {
 				}})
 
 				return
-			case oneOf(MenuItem(cmd), MenuDerivativesOrderbook, "do", "do/derivatives-orderbook"):
-				a.argContainer = NewArgContainer(&DerivativeOrderbookArgs{})
-				a.cmd = MenuDerivativesOrderbook
+			case oneOf(MenuItem(cmd), MenuTradeDerivativesOrderbook, "o", "o/orderbook"):
+				a.argContainer = NewArgContainer(&TradeDerivativeOrderbookArgs{})
+				a.cmd = MenuTradeDerivativesOrderbook
 				a.suggestions = nil
 
 				a.argContainer.AddSuggestions(0, a.controller.SuggestDerivativesMarkets())
@@ -443,8 +436,8 @@ func (a *AppState) executeInRoot(cmd string) {
 			}
 		case MenuUtil:
 			switch {
-			case oneOf(MenuItem(cmd), MenuTradeTokens, "t", "t/tokens"):
-				a.cmd = MenuTradeTokens
+			case oneOf(MenuItem(cmd), MenuTradeSpotTokens, "t", "t/tokens"):
+				a.cmd = MenuTradeSpotTokens
 				a.suggestions = nil
 			case oneOf(MenuItem(cmd), MenuUtilLock, "l", "l/lock"):
 				a.argContainer = NewArgContainer(&UtilTokenLockArgs{})
@@ -488,59 +481,86 @@ func (a *AppState) executeInRoot(cmd string) {
 				logrus.Warningf("unknown command: %s", cmd)
 				return
 			}
+			// case MenuDebug:
+			// case oneOf(MenuItem(cmd), MenuTradeSpotGenerateLimits, "g", "g/generatelimits"):
+			// 	a.argContainer = NewArgContainer(&TradeGenerateLimitOrdersArgs{})
+			// 	a.cmd = MenuTradeSpotGenerateLimits
+			// 	a.suggestions = nil
+
+			// 	a.argContainer.AddSuggestions(0, a.controller.SuggestMarkets())
+			// 	a.argContainer.AddSuggestions(1, []prompt.Suggest{{
+			// 		Text:        "1.00",
+			// 		Description: "Amount must be entered as float. Minimum value is 0.0000001",
+			// 	}})
+
+			// 	return
 		}
 	}
 
-	a.executeCmd(cmdArgs)
+	a.executeCmd(a.root, cmdArgs)
 	a.changeRoot(a.root)
 }
 
-func (a *AppState) executeCmd(args interface{}) {
-	switch a.cmd {
-	case MenuDerivativesLimitLong:
-		a.controller.ActionDerivativesLimitLong(args)
-	case MenuDerivativesLimitShort:
-		a.controller.ActionDerivativesLimitShort(args)
-	case MenuDerivativesOrderbook:
-		a.controller.ActionDerivativesOrderbook(args)
-	case MenuTradeLimitBuy:
-		a.controller.ActionTradeLimitBuy(args)
-	case MenuTradeLimitSell:
-		a.controller.ActionTradeLimitSell(args)
-	case MenuTradeMarketBuy:
-		a.controller.ActionTradeMarketBuy(args)
-	case MenuTradeMarketSell:
-		a.controller.ActionTradeMarketSell(args)
-	case MenuTradeGenerateLimits:
-		a.controller.ActionTradeGenerateLimitOrders(args)
-	case MenuTradeFillOrder:
-		a.controller.ActionTradeFillOrder(args)
-	case MenuTradeCancelOrder:
-		a.controller.ActionTradeCancelOrder(args)
-	case MenuTradeOrderbook:
-		a.controller.ActionTradeOrderbook(args)
-	case MenuTradeTokens:
-		a.controller.ActionTradeTokens()
-	case MenuTradePairs:
-		a.controller.ActionTradePairs()
-	case MenuUtilLock:
-		a.controller.ActionUtilLock(args)
-	case MenuUtilUnlock:
-		a.controller.ActionUtilUnlock(args)
-	case MenuUtilWrap:
-		a.controller.ActionUtilWrap(args)
-	case MenuUtilUnwrap:
-		a.controller.ActionUtilUnwrap(args)
-	case MenuAccountsUse:
-		a.controller.ActionAccountsUse(args)
-	case MenuAccountsCreate:
-		a.controller.ActionAccountsCreate(args)
-	case MenuAccountsImport:
-		a.controller.ActionAccountsImport(args)
-	case MenuAccountsImportPrivKey:
-		a.controller.ActionAccountsImportPrivKey(args)
-	case MenuAccountsList:
-		a.controller.ActionAccountsList()
+func (a *AppState) executeCmd(root MenuItem, args interface{}) {
+	switch root {
+	case MenuTradeSpot:
+		switch a.cmd {
+		case MenuTradeSpotLimitBuy:
+			a.controller.ActionTradeLimitBuy(args)
+		case MenuTradeSpotLimitSell:
+			a.controller.ActionTradeLimitSell(args)
+		case MenuTradeSpotMarketBuy:
+			a.controller.ActionTradeMarketBuy(args)
+		case MenuTradeSpotMarketSell:
+			a.controller.ActionTradeMarketSell(args)
+		case MenuTradeSpotFillOrder:
+			a.controller.ActionTradeFillOrder(args)
+		case MenuTradeSpotCancelOrder:
+			a.controller.ActionTradeCancelOrder(args)
+		case MenuTradeSpotOrderbook:
+			a.controller.ActionTradeOrderbook(args)
+		case MenuTradeSpotTokens:
+			a.controller.ActionTradeTokens()
+		case MenuTradeSpotPairs:
+			a.controller.ActionTradePairs()
+		}
+	case MenuTradeDerivatives:
+		switch a.cmd {
+		case MenuTradeDerivativesOrderbook:
+			a.controller.ActionTradeDerivativesOrderbook(args)
+		case MenuTradeDerivativesLimitLong:
+			a.controller.ActionTradeDerivativesLimitLong(args)
+		case MenuTradeDerivativesLimitShort:
+			a.controller.ActionTradeDerivativesLimitShort(args)
+		}
+	case MenuAccounts:
+		switch a.cmd {
+		case MenuAccountsUse:
+			a.controller.ActionAccountsUse(args)
+		case MenuAccountsCreate:
+			a.controller.ActionAccountsCreate(args)
+		case MenuAccountsImport:
+			a.controller.ActionAccountsImport(args)
+		case MenuAccountsImportPrivKey:
+			a.controller.ActionAccountsImportPrivKey(args)
+		case MenuAccountsList:
+			a.controller.ActionAccountsList()
+		}
+	case MenuUtil:
+		switch a.cmd {
+		case MenuUtilLock:
+			a.controller.ActionUtilLock(args)
+		case MenuUtilUnlock:
+			a.controller.ActionUtilUnlock(args)
+		case MenuUtilWrap:
+			a.controller.ActionUtilWrap(args)
+		case MenuUtilUnwrap:
+			a.controller.ActionUtilUnwrap(args)
+		}
+
+		// case MenuDebug:
+		// case MenuTradeSpotGenerateLimits:
+		// 	a.controller.ActionTradeGenerateLimitOrders(args)
 	}
 }
 
@@ -555,17 +575,17 @@ func (a *AppState) changeRoot(newRoot MenuItem) {
 		a.controller.ActionAbout()
 	case oneOf(newRoot, MenuQuit, "q", "q/quit", "exit"):
 		a.controller.ActionQuit()
-	case oneOf(newRoot, MenuTrade, "t", "t/trade-spot"):
-		a.root = MenuTrade
-		a.suggestions = tradingSuggestions
+	case oneOf(newRoot, MenuTradeSpot, "s", "s/spot"):
+		a.root = MenuTradeSpot
+		a.suggestions = tradeSpotSuggestions
 
 		_, ok := a.controller.getConfigValue("accounts.default")
 		if !ok {
 			logrus.Warningln("Default account is not set, go to keystore menu first.")
 		}
-	case oneOf(newRoot, MenuDerivatives, "d", "d/trade-derivatives"):
-		a.root = MenuDerivatives
-		a.suggestions = derivativesSuggestions
+	case oneOf(newRoot, MenuTradeDerivatives, "d", "d/derivatives"):
+		a.root = MenuTradeDerivatives
+		a.suggestions = tradeDerivativesSuggestions
 
 		_, ok := a.controller.getConfigValue("accounts.default")
 		if !ok {
