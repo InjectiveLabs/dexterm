@@ -1362,16 +1362,19 @@ func (ctl *AppController) ActionTradeOrderbook(args interface{}) {
 	}
 
 	for idx, fillable := range bidStates.FillableTakerAssetAmounts {
-		bids[idx].MetaData["fillableTakerAssetAmount"] = decimal.RequireFromString(fillable.String()).Shift(-18).StringFixed(5)
+		// TODO: (@Maxim) see why fillable is not correct
+		bids[idx].MetaData["filled"] = bidStates.OrdersInfo[idx].OrderTakerAssetFilledAmount.String()
+		bids[idx].MetaData["fillableTakerAssetAmount"] = bids[idx].MetaData["remainingTakerAssetAmount"]
+		bids[idx].MetaData["fillable"] = decimal.RequireFromString(fillable.String()).Shift(-18).StringFixed(5)
 		if bidStates.IsValidSignature[idx] == false {
-			bids[idx].MetaData["fillableTakerAssetAmount"] = decimal.RequireFromString("0").Shift(-18).StringFixed(5)
+			bids[idx].MetaData["fillable"] = decimal.RequireFromString("0").Shift(-18).StringFixed(5)
 		}
 		price, _ := calcOrderPrice(bids[idx].Order, true)
 		bids[idx].MetaData["price"] = price.StringFixed(9)
 		if orderStatus[bidStates.OrdersInfo[idx].OrderStatus] == "FULLY_FILLED" {
 			bids[idx].MetaData["notes"] = " " + decimal.RequireFromString(bids[idx].Order.TakerAssetAmount).Shift(-18).StringFixed(5) + " " + orderStatus[bidStates.OrdersInfo[idx].OrderStatus]
 		} else {
-			bids[idx].MetaData["notes"] = " " + bids[idx].MetaData["fillableTakerAssetAmount"] + "/" + decimal.RequireFromString(bids[idx].Order.TakerAssetAmount).Shift(-18).StringFixed(5) + " remaining " + orderStatus[bidStates.OrdersInfo[idx].OrderStatus]
+			bids[idx].MetaData["notes"] = " " + bids[idx].MetaData["fillable"] + "/" + decimal.RequireFromString(bids[idx].Order.TakerAssetAmount).Shift(-18).StringFixed(5) + " remaining " + orderStatus[bidStates.OrdersInfo[idx].OrderStatus]
 		}
 
 	}
@@ -1390,19 +1393,20 @@ func (ctl *AppController) ActionTradeOrderbook(args interface{}) {
 	}
 
 	for idx, fillable := range askStates.FillableTakerAssetAmounts {
-		asks[idx].MetaData["fillableTakerAssetAmount"] = decimal.RequireFromString(fillable.String()).Shift(-18).StringFixed(5)
+		asks[idx].MetaData["fillableTakerAssetAmount"] = asks[idx].MetaData["remainingTakerAssetAmount"]
+		// TODO: (@Maxim) see why fillable is not correct
+		asks[idx].MetaData["fillable"] = decimal.RequireFromString(fillable.String()).Shift(-18).StringFixed(5)
 		if askStates.IsValidSignature[idx] == false {
-			asks[idx].MetaData["fillableTakerAssetAmount"] = decimal.RequireFromString("0").Shift(-18).StringFixed(5)
+			asks[idx].MetaData["fillable"] = decimal.RequireFromString("0").Shift(-18).StringFixed(5)
 		}
 		price, _ := calcOrderPrice(asks[idx].Order, false)
 		asks[idx].MetaData["price"] = price.StringFixed(9)
 		if orderStatus[askStates.OrdersInfo[idx].OrderStatus] == "FULLY_FILLED" {
 			asks[idx].MetaData["notes"] = " " + decimal.RequireFromString(asks[idx].Order.TakerAssetAmount).Shift(-18).StringFixed(5) + " " + orderStatus[askStates.OrdersInfo[idx].OrderStatus]
 		} else {
-			asks[idx].MetaData["notes"] =  " " + asks[idx].MetaData["fillableTakerAssetAmount"] + "/" + decimal.RequireFromString(asks[idx].Order.TakerAssetAmount).Shift(-18).StringFixed(5) + " remaining " + orderStatus[askStates.OrdersInfo[idx].OrderStatus]
+			asks[idx].MetaData["notes"] =  " " + asks[idx].MetaData["fillable"] + "/" + decimal.RequireFromString(asks[idx].Order.TakerAssetAmount).Shift(-18).StringFixed(5) + " remaining " + orderStatus[askStates.OrdersInfo[idx].OrderStatus]
 		}
 	}
-
 
 	pair := strings.Split(orderbookArgs.Market, "/")
 	baseAsset := pair[0]
@@ -1418,18 +1422,18 @@ func (ctl *AppController) ActionTradeOrderbook(args interface{}) {
 	)
 	zero := decimal.RequireFromString("0").Shift(-18).StringFixed(5)
 	sort.Slice(asks, func(i, j int) bool {
-		if asks[i].MetaData["fillableTakerAssetAmount"] == zero {
+		if asks[i].MetaData["fillable"] == zero {
 			return true
-		}else if asks[j].MetaData["fillableTakerAssetAmount"] == zero {
+		}else if asks[j].MetaData["fillable"] == zero {
 			return false
 		}
 		return decimal.RequireFromString(asks[i].MetaData["price"]).GreaterThan(decimal.RequireFromString(asks[j].MetaData["price"]))
 	})
 
 	sort.Slice(bids, func(i, j int) bool {
-		if bids[i].MetaData["fillableTakerAssetAmount"] == zero {
+		if bids[i].MetaData["fillable"] == zero {
 			return false
-		}else if bids[j].MetaData["fillableTakerAssetAmount"] == zero {
+		}else if bids[j].MetaData["fillable"] == zero {
 			return true
 		}
 		return decimal.RequireFromString(bids[i].MetaData["price"]).GreaterThan(decimal.RequireFromString(bids[j].MetaData["price"]))
@@ -1446,7 +1450,7 @@ func (ctl *AppController) ActionTradeOrderbook(args interface{}) {
 			notes += ask.MetaData["notes"]
 			table.AddRow(
 				color.RedString("%s", ask.MetaData["price"]),
-				color.RedString("%s", ask.MetaData["fillableTakerAssetAmount"]),
+				color.RedString("%s", ask.MetaData["fillable"]),
 				notes,
 			)
 		}
@@ -1466,9 +1470,16 @@ func (ctl *AppController) ActionTradeOrderbook(args interface{}) {
 			notes += bid.MetaData["notes"]
 
 			price, _ := calcOrderPrice(bid.Order, true)
+			makerAmount := decimal.RequireFromString(bid.Order.MakerAssetAmount)
+			takerAmount := decimal.RequireFromString(bid.Order.TakerAssetAmount)
+			fillable := decimal.RequireFromString(bid.MetaData["fillableTakerAssetAmount"])
+			filled := decimal.RequireFromString(bid.MetaData["filled"])
+			fmt.Println(makerAmount.Shift(-18).StringFixed(5), takerAmount.Shift(-18).StringFixed(5), fillable.Shift(-18).StringFixed(5), filled.Shift(-18).StringFixed(5))
+			// (takerAmount - fillable) / takerAmount * makerAmount
+
 			table.AddRow(
 				color.GreenString("%s", price.StringFixed(9)),
-				color.GreenString("%s", bid.MetaData["fillableTakerAssetAmount"]),
+				color.GreenString("%s", (takerAmount.Sub(fillable)).Mul(makerAmount).Div(takerAmount).Shift(-18).StringFixed(5)),
 				notes,
 			)
 		}
