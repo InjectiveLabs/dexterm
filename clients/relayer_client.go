@@ -100,8 +100,8 @@ func (c *SRAClient) DerivativeOrders(
 	}
 	emptyAssetStr := "0x000000000000000000000000000000000000000000000000000000000000000000000000"
 	longRes, err := c.client.Orders(ctx, &sraAPI.OrdersPayload{
-		MakerAssetData: &assetData,
-		TakerAssetData: &emptyAssetStr,
+		MakerAssetData:    &assetData,
+		TakerAssetData:    &emptyAssetStr,
 		MakerFeeAssetData: &emptyAssetStr,
 		TakerFeeAssetData: &emptyAssetStr,
 	})
@@ -111,12 +111,11 @@ func (c *SRAClient) DerivativeOrders(
 	}
 
 	shortRes, err := c.client.Orders(ctx, &sraAPI.OrdersPayload{
-		MakerAssetData: &emptyAssetStr,
-		TakerAssetData: &assetData,
+		MakerAssetData:    &emptyAssetStr,
+		TakerAssetData:    &assetData,
 		MakerFeeAssetData: &emptyAssetStr,
 		TakerFeeAssetData: &emptyAssetStr,
 	})
-
 
 	if err != nil {
 		err = errors.Wrap(err, "failed to get derivative orders")

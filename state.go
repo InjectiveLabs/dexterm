@@ -65,6 +65,7 @@ const (
 	MenuUtilLock   MenuItem = "lock"
 	MenuUtilWrap   MenuItem = "wrap"
 	MenuUtilUnwrap MenuItem = "unwrap"
+	MenuUtilTokens MenuItem = "tokens"
 
 	// Accounts menu items
 	MenuAccountsUse           MenuItem = "use"
@@ -349,6 +350,9 @@ func (a *AppState) executeInRoot(cmd string) {
 			case oneOf(MenuItem(cmd), MenuTradeSpotTokens, "t", "t/tokens"):
 				a.cmd = MenuTradeSpotTokens
 				a.suggestions = nil
+			case oneOf(MenuItem(cmd), MenuUtilTokens, "t", "t/tokens"):
+				a.cmd = MenuUtilTokens
+				a.suggestions = nil
 			default:
 				logrus.Warningf("unknown command: %s", cmd)
 				return
@@ -548,6 +552,8 @@ func (a *AppState) executeCmd(root MenuItem, args interface{}) {
 		}
 	case MenuUtil:
 		switch a.cmd {
+		case MenuUtilTokens:
+			a.controller.ActionTradeTokens()
 		case MenuUtilLock:
 			a.controller.ActionUtilLock(args)
 		case MenuUtilUnlock:

@@ -624,7 +624,8 @@ func (ctl *AppController) ActionTradeFillOrder(args interface{}) {
 		fillAmount = dec2big(fillAmountDec)
 	}
 
-	price, vol := calcOrderPrice(makeOrder, isBid)
+	// TODO: returning meta from sraClient.Order
+	price, vol := calcOrderPrice(makeOrder, "", isBid)
 	vol = vol.Shift(-18)
 
 	if fillAmountDec.GreaterThan(vol) {
@@ -1224,14 +1225,14 @@ func (ctl *AppController) ActionTradeDerivativesOrderbook(args interface{}) {
 	}
 	logrus.Info("========= BIDS ======")
 	for idx, fillable := range bidStates.FillableTakerAssetAmounts {
-		bids[idx].MetaData["fillableTakerAssetAmount"] = fillable.String()
+		bids[idx].MetaData["remainingTakerAssetAmount"] = fillable.String()
 		if bidStates.IsValidSignature[idx] == false {
-			bids[idx].MetaData["fillableTakerAssetAmount"] = "0"
+			bids[idx].MetaData["remainingTakerAssetAmount"] = "0"
 		}
 		transferrableAmount, _ := ctl.ethCore.GetTransferableAssetAmount(ctx, common.HexToAddress(bids[idx].Order.MakerAddress))
 		logrus.Info("Order Status: ", orderStatus[bidStates.OrdersInfo[idx].OrderStatus], "\tTransferrable: ", transferrableAmount.String())
 		logrus.Info(bidStates.OrdersInfo[idx].OrderTakerAssetFilledAmount.String(), "/", bids[idx].Order.TakerAssetAmount, " contracts filled")
-		logrus.Info("Fillable: ", bids[idx].MetaData["fillableTakerAssetAmount"])
+		logrus.Info("Fillable: ", bids[idx].MetaData["remainingTakerAssetAmount"])
 	}
 
 	askOrders := make([]wrappers.Order, len(asks))
@@ -1249,14 +1250,14 @@ func (ctl *AppController) ActionTradeDerivativesOrderbook(args interface{}) {
 	}
 
 	for idx, fillable := range askStates.FillableTakerAssetAmounts {
-		asks[idx].MetaData["fillableTakerAssetAmount"] = fillable.String()
+		asks[idx].MetaData["remainingTakerAssetAmount"] = fillable.String()
 		if askStates.IsValidSignature[idx] == false {
-			asks[idx].MetaData["fillableTakerAssetAmount"] = "0"
+			asks[idx].MetaData["remainingTakerAssetAmount"] = "0"
 		}
 		transferrableAmount, _ := ctl.ethCore.GetTransferableAssetAmount(ctx, common.HexToAddress(asks[idx].Order.MakerAddress))
 		logrus.Info("Order Status: ", orderStatus[askStates.OrdersInfo[idx].OrderStatus], "\tTransferrable: ", transferrableAmount.String())
 		logrus.Info(askStates.OrdersInfo[idx].OrderTakerAssetFilledAmount.String(), "/", asks[idx].Order.TakerAssetAmount, " contracts filled")
-		logrus.Info("Fillable: ", asks[idx].MetaData["fillableTakerAssetAmount"])
+		logrus.Info("Fillable: ", asks[idx].MetaData["remainingTakerAssetAmount"])
 	}
 	//logrus.Info(bidStates.FillableTakerAssetAmounts)
 	//logrus.Info(askStates.FillableTakerAssetAmounts)
@@ -1280,7 +1281,7 @@ func (ctl *AppController) ActionTradeDerivativesOrderbook(args interface{}) {
 			}
 
 			price := decimal.RequireFromString(ask.Order.MakerAssetAmount).Truncate(9).Shift(-18).String()
-			quantity := decimal.RequireFromString(ask.MetaData["fillableTakerAssetAmount"])
+			quantity := decimal.RequireFromString(ask.MetaData["remainingTakerAssetAmount"])
 			if quantity.IsZero() {
 				continue
 			}
@@ -1304,7 +1305,7 @@ func (ctl *AppController) ActionTradeDerivativesOrderbook(args interface{}) {
 			}
 
 			price := decimal.RequireFromString(bid.Order.MakerAssetAmount).Truncate(9).Shift(-18).String()
-			quantity := decimal.RequireFromString(bid.MetaData["fillableTakerAssetAmount"])
+			quantity := decimal.RequireFromString(bid.MetaData["remainingTakerAssetAmount"])
 			if quantity.IsZero() {
 				continue
 			}
@@ -1361,7 +1362,7 @@ func (ctl *AppController) ActionTradeOrderbook(args interface{}) {
 				notes = "⭑ owner"
 			}
 
-			price, vol := calcOrderPrice(ask.Order, false)
+			price, vol := calcOrderPrice(ask.Order, ask.MetaData["remainingTakerAssetAmount"], false)
 			table.AddRow(
 				color.RedString("%s", price.StringFixed(9)),
 				color.RedString("%s", vol.Shift(-18).StringFixed(9)),
@@ -1381,7 +1382,7 @@ func (ctl *AppController) ActionTradeOrderbook(args interface{}) {
 				notes = "⭑ owner"
 			}
 
-			price, vol := calcOrderPrice(bid.Order, true)
+			price, vol := calcOrderPrice(bid.Order, bid.MetaData["remainingTakerAssetAmount"], true)
 			table.AddRow(
 				color.GreenString("%s", price.StringFixed(9)),
 				color.GreenString("%s", vol.Shift(-18).StringFixed(9)),
@@ -1913,7 +1914,7 @@ func (ctl *AppController) SuggestOrderToFill(pairName string) []prompt.Suggest {
 
 		zxOrder, _ := ro2zo(ask.Order)
 		orderHash, _ := zxOrder.ComputeOrderHash()
-		price, vol := calcOrderPrice(ask.Order, false)
+		price, vol := calcOrderPrice(ask.Order, ask.MetaData["remainingTakerAssetAmount"], false)
 		vol = vol.Shift(-18)
 
 		suggestions = append(suggestions, prompt.Suggest{
@@ -1927,7 +1928,7 @@ func (ctl *AppController) SuggestOrderToFill(pairName string) []prompt.Suggest {
 
 		zxOrder, _ := ro2zo(bid.Order)
 		orderHash, _ := zxOrder.ComputeOrderHash()
-		price, vol := calcOrderPrice(bid.Order, true)
+		price, vol := calcOrderPrice(bid.Order, bid.MetaData["remainingTakerAssetAmount"], true)
 		vol = vol.Shift(-18)
 
 		suggestions = append(suggestions, prompt.Suggest{
@@ -1959,7 +1960,7 @@ func (ctl *AppController) SuggestOrderToCancel(pairName string) []prompt.Suggest
 		}
 
 		orderHash, _ := zxOrder.ComputeOrderHash()
-		price, vol := calcOrderPrice(ask.Order, false)
+		price, vol := calcOrderPrice(ask.Order, ask.MetaData["remainingTakerAssetAmount"], false)
 		vol = vol.Shift(-18)
 
 		suggestions = append(suggestions, prompt.Suggest{
@@ -1969,15 +1970,13 @@ func (ctl *AppController) SuggestOrderToCancel(pairName string) []prompt.Suggest
 	}
 
 	for _, bid := range bids {
-		// TODO: ignore own orders
-
 		zxOrder, _ := ro2zo(bid.Order)
 		if zxOrder.MakerAddress != owner {
 			continue
 		}
 
 		orderHash, _ := zxOrder.ComputeOrderHash()
-		price, vol := calcOrderPrice(bid.Order, true)
+		price, vol := calcOrderPrice(bid.Order, bid.MetaData["remainingTakerAssetAmount"], true)
 		vol = vol.Shift(-18)
 
 		suggestions = append(suggestions, prompt.Suggest{
@@ -2010,11 +2009,9 @@ func (ctl *AppController) takeFirstAccountAsDefault() bool {
 			logrus.WithField("keystore", ctl.keystorePath).Infoln("No accounts found in keystore yet")
 			return false
 		}
-	} else {
-		// already set
-		return false
 	}
 
+	// already set
 	return false
 }
 
@@ -2233,18 +2230,27 @@ func (ctl *AppController) getConfigValue(path string, fallback ...interface{}) (
 	return v.(string), true
 }
 
-func calcOrderPrice(order *sraAPI.Order, bid bool) (price, vol decimal.Decimal) {
+func calcOrderPrice(order *sraAPI.Order, fillable string, bid bool) (price, vol decimal.Decimal) {
 	makerAmount := decimal.RequireFromString(order.MakerAssetAmount)
 	takerAmount := decimal.RequireFromString(order.TakerAssetAmount)
 
+	var err error
+	var remainingTakerAssetAmount decimal.Decimal
+
+	if len(fillable) == 0 {
+		remainingTakerAssetAmount = takerAmount
+	} else if remainingTakerAssetAmount, err = decimal.NewFromString(fillable); err != nil {
+		remainingTakerAssetAmount = takerAmount
+	}
+
 	if bid { // i.e. buy
 		price = makerAmount.DivRound(takerAmount, 9)
-		vol = decimal.RequireFromString(order.TakerAssetAmount)
+		vol = remainingTakerAssetAmount
 		return
 	}
 
 	price = takerAmount.DivRound(makerAmount, 9)
-	vol = decimal.RequireFromString(order.MakerAssetAmount)
+	vol = remainingTakerAssetAmount.DivRound(price, 9)
 	return
 }
 
