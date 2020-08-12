@@ -146,6 +146,7 @@ var appConfigSetMap = map[string]cli.StringOpt{
 	"networks.mainnet.weth9_address":       networksMainnetWETH9Opt,
 	"networks.mainnet.erc20proxy_address":  networksMainnetERC20ProxyOpt,
 	"networks.mainnet.exchange_address":    networksMainnetExchangeOpt,
+	"networks.mainnet.devutils_address":    networksMainnetDevUtilsOpt,
 	"networks.mainnet.futures_address":     networksMainnetFuturesOpt,
 	"networks.mainnet.coordinator_address": networksMainnetCoordinatorOpt,
 
@@ -163,6 +164,7 @@ var appConfigSetMap = map[string]cli.StringOpt{
 	"networks.kovan.weth9_address":       networksKovanWETH9Opt,
 	"networks.kovan.erc20proxy_address":  networksKovanERC20ProxyOpt,
 	"networks.kovan.exchange_address":    networksKovanExchangeOpt,
+	"networks.kovan.devutils_address":    networksKovanDevUtilsOpt,
 	"networks.kovan.futures_address":     networksKovanFuturesOpt,
 	"networks.kovan.coordinator_address": networksKovanCoordinatorOpt,
 
@@ -172,6 +174,7 @@ var appConfigSetMap = map[string]cli.StringOpt{
 	"networks.devnet.weth9_address":       networksDevnetWETH9Opt,
 	"networks.devnet.erc20proxy_address":  networksDevnetERC20ProxyOpt,
 	"networks.devnet.exchange_address":    networksDevnetExchangeOpt,
+	"networks.devnet.devutils_address":    networksDevnetDevUtilsOpt,
 	"networks.devnet.futures_address":     networksDevnetFuturesOpt,
 	"networks.devnet.coordinator_address": networksDevnetCoordinatorOpt,
 
@@ -181,6 +184,7 @@ var appConfigSetMap = map[string]cli.StringOpt{
 	"networks.injective.weth9_address":       networksInjectiveWETH9Opt,
 	"networks.injective.erc20proxy_address":  networksInjectiveERC20ProxyOpt,
 	"networks.injective.exchange_address":    networksInjectiveExchangeOpt,
+	"networks.injective.devutils_address":    networksInjectiveDevUtilsOpt,
 	"networks.injective.futures_address":     networksInjectiveFuturesOpt,
 	"networks.injective.coordinator_address": networksInjectiveCoordinatorOpt,
 
