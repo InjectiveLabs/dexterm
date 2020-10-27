@@ -7,7 +7,7 @@ require (
 	github.com/c-bata/go-prompt v0.2.3
 	github.com/ethereum/go-ethereum v1.9.13
 	github.com/fatih/color v1.9.0
-	github.com/jawher/mow.cli v1.1.0
+	github.com/jawher/mow.cli v1.2.0
 	github.com/mattn/go-tty v0.0.3 // indirect
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/oklog/ulid v1.3.1
