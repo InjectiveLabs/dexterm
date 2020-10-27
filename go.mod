@@ -16,7 +16,7 @@ require (
 	github.com/pkg/term v0.0.0-20190109203006-aa71e9d9e942 // indirect
 	github.com/serialx/hashring v0.0.0-20190515033939-7706f26af194
 	github.com/shopspring/decimal v0.0.0-20200105231215-408a2507e114
-	github.com/sirupsen/logrus v1.5.0
+	github.com/sirupsen/logrus v1.7.0
 	github.com/stretchr/testify v1.5.1
 	github.com/tj/go-spin v1.1.0
 	github.com/xlab/closer v0.0.0-20190328110542-03326addb7c2
