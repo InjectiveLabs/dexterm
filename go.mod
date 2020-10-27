@@ -17,7 +17,7 @@ require (
 	github.com/serialx/hashring v0.0.0-20190515033939-7706f26af194
 	github.com/shopspring/decimal v0.0.0-20200105231215-408a2507e114
 	github.com/sirupsen/logrus v1.5.0
-	github.com/stretchr/testify v1.5.1
+	github.com/stretchr/testify v1.6.1
 	github.com/tj/go-spin v1.1.0
 	github.com/xlab/closer v0.0.0-20190328110542-03326addb7c2
 	github.com/xlab/structwalk v1.1.1
