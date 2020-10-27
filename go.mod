@@ -22,6 +22,6 @@ require (
 	github.com/xlab/closer v0.0.0-20190328110542-03326addb7c2
 	github.com/xlab/structwalk v1.1.1
 	github.com/xlab/termtables v1.0.0
-	goa.design/goa/v3 v3.1.1
-	golang.org/x/crypto v0.0.0-20200423211502-4bdfaf469ed5
+	goa.design/goa/v3 v3.2.4
+	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
 )
