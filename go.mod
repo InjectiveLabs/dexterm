@@ -5,7 +5,7 @@ go 1.13
 require (
 	github.com/InjectiveLabs/zeroex-go v1.7.9
 	github.com/c-bata/go-prompt v0.2.3
-	github.com/ethereum/go-ethereum v1.9.13
+	github.com/ethereum/go-ethereum v1.9.23
 	github.com/fatih/color v1.9.0
 	github.com/jawher/mow.cli v1.1.0
 	github.com/mattn/go-tty v0.0.3 // indirect
@@ -23,5 +23,5 @@ require (
 	github.com/xlab/structwalk v1.1.1
 	github.com/xlab/termtables v1.0.0
 	goa.design/goa/v3 v3.1.1
-	golang.org/x/crypto v0.0.0-20200423211502-4bdfaf469ed5
+	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
 )
