@@ -11,7 +11,7 @@ require (
 	github.com/mattn/go-tty v0.0.3 // indirect
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/oklog/ulid v1.3.1
-	github.com/pelletier/go-toml v1.6.0
+	github.com/pelletier/go-toml v1.8.1
 	github.com/pkg/errors v0.9.1
 	github.com/pkg/term v0.0.0-20190109203006-aa71e9d9e942 // indirect
 	github.com/serialx/hashring v0.0.0-20190515033939-7706f26af194
